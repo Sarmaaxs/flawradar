@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About - Wsec</title>
+<meta name="description" content="What Wsec sends, what it keeps, and what it cannot tell you.">
+<link rel="stylesheet" href="/assets/css/wsec.css">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<w-header current="about"></w-header>
+
+<main>
+  <h1>About Wsec</h1>
+  <p class="lead">Wsec is a small tool for developers who want to know how their site looks from the outside. It reads what the server already tells every visitor and points out the settings that are missing or wrong.</p>
+
+  <h2>What it sends</h2>
+  <p>Requests are read-only and come from the <a href="/whitelist">published addresses</a>. A normal scan makes about eight requests. A deep scan, which needs <a href="/verify">proof of control</a>, adds about twenty. Wsec never submits a form, logs in, or tries passwords, and it follows at most five redirects, checking every one before it connects.</p>
+
+  <h2>What it keeps</h2>
+  <p>Each report stores the host name, the time, the score, the findings, and short evidence such as header values. Page bodies are not stored. For the deep checks, a file counts as exposed only when its content matches the kind of file expected, and the content itself is thrown away. Reports are deleted after the retention period set by whoever runs the service. Anyone who has a report link can read the report, so treat the link like a password. Report pages ask search engines not to index them.</p>
+
+  <h2>What it will not scan</h2>
+  <p>Private addresses, loopback, link-local and other reserved ranges are refused, and so is any name that resolves to one. This is checked again at connect time and at every redirect, so a DNS answer that changes between the check and the connection does not get through. Only ports 80 and 443 are used.</p>
+
+  <h2>What it cannot tell you</h2>
+  <ul>
+    <li>It looks at the home page. A header missing from the home page may be present elsewhere, and the reverse.</li>
+    <li>It does not look for bugs in your code. A good score means the settings it checks are in place, not that the site is secure.</li>
+    <li>Some checks look at what a browser would do (cookies, CSP). They read the policy as written and do not run the page.</li>
+    <li>DKIM cannot be checked from outside because the selector name is not public.</li>
+    <li>Sites behind a firewall that blocks unknown scanners may refuse the request. Wsec reports that instead of grading the block page.</li>
+  </ul>
+
+  <h2>Running your own</h2>
+  <p>Wsec is a single Node.js process with an SQLite file. The README in the project explains the settings, including how to publish your own scanner addresses so people can allow-list them.</p>
+</main>
+
+<w-footer></w-footer>
+</body>
+</html>

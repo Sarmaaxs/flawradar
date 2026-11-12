@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Report - Wsec</title>
+<link rel="stylesheet" href="/assets/css/wsec.css">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<w-header current="scan"></w-header>
+
+<main>
+  <h1 id="title">Report</h1>
+  <p id="meta" class="muted">Loading...</p>
+
+  <section id="progress" hidden>
+    <h2>Scanning</h2>
+    <ol id="steps" class="steps"></ol>
+    <p><small>This page updates by itself. A scan usually takes five to fifteen seconds.</small></p>
+  </section>
+
+  <section id="problem" hidden></section>
+
+  <section id="result" hidden>
+    <div class="summary">
+      <w-score id="score"></w-score>
+      <table id="counts" aria-label="Result counts"></table>
+    </div>
+    <p id="previous" class="muted" hidden></p>
+    <div id="deep-note" class="notice" hidden>
+      The deep checks were not run. They need proof that you control the host. <a id="deep-link" href="/verify">Add the proof</a>, then scan again with the deep box ticked.
+    </div>
+
+    <div class="toolbar">
+      <span>Show:</span>
+      <button type="button" data-filter="all" aria-pressed="true">All</button>
+      <button type="button" data-filter="fail" aria-pressed="false">Failed</button>
+      <button type="button" data-filter="warn" aria-pressed="false">Warnings</button>
+      <button type="button" data-filter="pass" aria-pressed="false">Passed</button>
+      <span id="downloads" hidden>Download header fixes: <span id="download-links"></span></span>
+      <button type="button" id="rescan">Scan again</button>
+    </div>
+    <div id="findings" class="findings" data-filter="all"></div>
+  </section>
+</main>
+
+<w-footer></w-footer>
+<script type="module" src="/assets/js/report.js"></script>
+</body>
+</html>

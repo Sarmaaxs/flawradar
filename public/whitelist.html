@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Whitelist the scanner - Wsec</title>
+<meta name="description" content="The addresses and user agent Wsec scans from, with allow-list rules for nginx, ModSecurity, fail2ban, ufw and Cloudflare.">
+<link rel="stylesheet" href="/assets/css/wsec.css">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<w-header current="whitelist"></w-header>
+
+<main>
+  <h1>Whitelist the scanner</h1>
+  <p class="lead">Firewalls, bot filters and rate limiters often block scanners. Allow the addresses below and Wsec can read your site the way a visitor does. Every request comes from one of these addresses and carries the user agent shown here.</p>
+
+  <h2>Scanner addresses</h2>
+  <div id="ips"><p class="muted">Loading...</p></div>
+
+  <h2>User agent</h2>
+  <w-copy id="ua" label="User-Agent header"></w-copy>
+  <p><small>A user agent is easy to fake, so use it for logging and filtering, and do not treat it as proof. The address is what to allow.</small></p>
+
+  <h2>Allow-list rules</h2>
+  <p>These are generated from the addresses above. Read them before you paste them in: they match your server's configuration style, not your exact setup.</p>
+  <div id="rules"></div>
+
+  <h2>What the scanner does</h2>
+  <ul>
+    <li>Normal scan: about eight requests. The home page over HTTPS, one request to port 80, one CORS test, one or two requests for <code>security.txt</code>, a TLS handshake, and some DNS lookups.</li>
+    <li>Deep scan: about twenty more requests for well-known paths, spaced a fraction of a second apart. Deep scans only run against hosts whose owner has <a href="/verify">proved control</a>.</li>
+    <li>Only <code>GET</code>, <code>HEAD</code> and one <code>OPTIONS</code> request. Nothing is submitted, no forms are filled in, nothing is guessed at, no passwords are tried.</li>
+    <li>No more than six scans of one host per hour, and twelve per hour from one visitor.</li>
+    <li>Responses are checked and discarded. The report keeps the findings, a few header values and short excerpts used as evidence.</li>
+  </ul>
+
+  <p id="contact" class="notice" hidden></p>
+</main>
+
+<w-footer></w-footer>
+<script type="module" src="/assets/js/whitelist.js"></script>
+</body>
+</html>

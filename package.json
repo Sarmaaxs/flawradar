@@ -1,0 +1,16 @@
+{
+  "name": "wsec",
+  "version": "0.1.0",
+  "description": "Web security checker for developers. Scans a public website's TLS, headers, cookies, DNS and exposed files, and publishes fixed scanner IPs you can whitelist.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch server/index.js",
+    "test": "node --disable-warning=ExperimentalWarning --test"
+  },
+  "license": "UNLICENSED"
+}
