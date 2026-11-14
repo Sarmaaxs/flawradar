@@ -1,11 +1,12 @@
 # Wsec
 
-A web security checker for developers. Enter a website address and Wsec reports on its TLS setup, response headers, cookies, DNS records and a few well-known files, then gives you the configuration to fix what it found. It scans from fixed IP addresses that it publishes, so you can allow-list them in a firewall or WAF.
+A web security checker for developers devloped By Sarem Menur. Enter a website address and Wsec reports on its TLS setup, response headers, cookies, DNS records and a few well-known files, then gives you the configuration to fix what it found. It scans from fixed IP addresses that it publishes, so you can allow-list them in a firewall or WAF.
 
 - 29 checks in 7 groups, each with an explanation and a fix for nginx, Apache or Express where one applies
 - Scanner IP and user agent page with ready-made rules for nginx, ModSecurity, fail2ban, ufw and Cloudflare
 - Deep scan (exposed `.git`, `.env`, backups, directory listings, HTTP methods) that only runs after the site owner proves control, by a file or a DNS record
 - Reports with a score, grade, history against the previous scan, and downloadable server config
+- Source code check: drop a folder, files or a .zip on `/source` and 55 line rules plus 8 file checks look for hard-coded secrets, SQL injection, XSS, shell injection, weak crypto, turned-off TLS checks and risky config. Code is analysed in memory and never stored
 - No dependencies. Node's standard library and its built-in SQLite module
 
 ## Requirements
@@ -48,6 +49,7 @@ All settings are environment variables (or lines in `.env`). See `.env.example` 
 | `WSEC_SCANS_PER_HOST_PER_HOUR` | `6` | Scans per target host per hour |
 | `WSEC_MAX_CONCURRENT` | `4` | Scans running at once. More wait in a queue |
 | `WSEC_RETENTION_DAYS` | `30` | Reports are deleted after this many days |
+| `WSEC_SOURCE_PER_HOUR` | `20` | Source code checks per visitor per hour |
 | `WSEC_DATA_DIR` | `./data` | Where `wsec.db` is kept |
 | `WSEC_ALLOW_PRIVATE` | off | Development only. Allows private addresses and custom ports |
 
@@ -71,6 +73,12 @@ server/
   verify.js         ownership proof for deep scans
   db.js             SQLite storage (node:sqlite)
   ratelimit.js      sliding window limiter
+  source/
+    rules.js        the line rules and file checks, with explanations and fixes
+    analyze.js      runs the rules over uploaded files, masks secrets
+    filechecks.js   .env, Dockerfile, package.json, requirements.txt checks
+    zip.js          minimal zip reader with zip-bomb limits (in memory, nothing extracted)
+    paths.js        which files are read, and path cleaning
   scanner/
     net.js          target parsing, private-address rules, DNS resolution
     fetcher.js      HTTP client, pins the connection to a checked address
@@ -109,9 +117,22 @@ The web interface is built without `innerHTML`, and the site serves a strict Con
 | `GET /api/scans/:id/fix?server=nginx` | Download fixes as config (`nginx`, `apache`, `express`) |
 | `POST /api/verify` | Body `{"host": "example.com"}`. Returns the proof value |
 | `POST /api/verify/check` | Checks whether the proof is in place |
+| `POST /api/source` | Body `{"files": [{"path": "src/a.js", "content": "..."}]}`. Returns findings, nothing stored |
+| `POST /api/source/zip` | Body is the raw .zip, `Content-Type: application/zip` |
+| `GET /api/source/rules` | The rule list and upload limits |
 | `GET /api/scanner` | Published addresses, user agent, contact |
 | `GET /api/checks` | The list of checks with explanations |
 | `GET /api/health` | Liveness |
+
+## Source code scanning
+
+The rules in `server/source/rules.js` match one line at a time. They find common mistakes and do not follow data from a request into a database call, so multi-line and cross-file bugs, and logic errors such as missing permission checks, are not found. Each rule has a confidence level because some matches are lookalikes.
+
+It does not look up known vulnerabilities in dependencies. That needs a vulnerability database (OSV, the npm advisory database). Run `npm audit`, `pip-audit` or `osv-scanner` for it.
+
+Uploads are limited to 3000 files, 512 KB per file, 30 MB of text and a 10 MB zip (see `server/config.js`). Folders like `node_modules`, `.git`, `vendor`, `dist` and `build` are skipped, and lines over 1000 characters (minified code) are skipped. Zips are read in memory with a hard cap on how far any entry may inflate.
+
+To add a rule, add an object to `RULES` with an `id`, `title`, `severity`, `confidence`, `pattern`, `why`, `fix` and optionally `exts` and a `filter` function, then add a positive and a negative case to `test/source.test.js`.
 
 ## Limits
 

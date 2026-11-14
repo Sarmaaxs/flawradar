@@ -15,7 +15,11 @@ export function h(tag, attrs = {}, ...children) {
 }
 
 export async function api(path, options = {}) {
-  const headers = { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}) };
+  const headers = {
+    Accept: 'application/json',
+    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    ...options.headers,
+  };
   const res = await fetch(path, { ...options, headers });
   let data = null;
   try {

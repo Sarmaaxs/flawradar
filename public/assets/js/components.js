@@ -6,6 +6,7 @@ import { h } from './dom.js';
 const NAV = [
   ['scan', '/', 'Scan'],
   ['whitelist', '/whitelist', 'Whitelist'],
+  ['source', '/source', 'Source code'],
   ['verify', '/verify', 'Verify'],
   ['checks', '/checks', 'Checks'],
   ['about', '/about', 'About'],
@@ -44,13 +45,13 @@ class WFooter extends HTMLElement {
   }
 }
 
-/** <w-status value="fail"> prints [FAIL] */
+/** <w-status value="fail"> prints [FAIL]. The value sets the colour; label, if given, sets the text. */
 class WStatus extends HTMLElement {
-  static observedAttributes = ['value'];
+  static observedAttributes = ['value', 'label'];
   connectedCallback() { this.render(); }
   attributeChangedCallback() { this.render(); }
   render() {
-    const v = this.getAttribute('value') || '';
+    const v = this.getAttribute('label') || this.getAttribute('value') || '';
     this.textContent = `[${v.toUpperCase()}]`;
     this.setAttribute('role', 'text');
   }
@@ -136,7 +137,107 @@ class WTabs extends HTMLElement {
   }
 }
 
+const SKIP_DIRS = new Set(['node_modules', '.git', '.svn', '.hg', 'vendor', 'dist', 'build', '.next', '.nuxt', '.cache', '__pycache__', 'venv', '.venv', 'bower_components', 'coverage', '.idea', '.vscode', 'target']);
+
+/** Read a dropped directory tree. Folders such as node_modules are not entered. */
+async function walk(entry, prefix, out, skipped) {
+  if (entry.isFile) {
+    const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
+    out.push({ path: prefix + entry.name, file });
+  } else if (entry.isDirectory) {
+    if (SKIP_DIRS.has(entry.name)) {
+      skipped.add(entry.name);
+      return;
+    }
+    const reader = entry.createReader();
+    for (;;) {
+      const batch = await new Promise((resolve, reject) => reader.readEntries(resolve, reject));
+      if (!batch.length) break;
+      for (const child of batch) await walk(child, `${prefix}${entry.name}/`, out, skipped);
+    }
+  }
+}
+
+/**
+ * <w-dropzone>: drop files, a folder or a .zip, or use the buttons.
+ * Fires "w-files" with detail { files: [{ path, file }], skippedDirs: [name] }.
+ */
+class WDropzone extends HTMLElement {
+  connectedCallback() {
+    if (this._built) return;
+    this._built = true;
+
+    const pick = (attrs) => {
+      const input = h('input', { type: 'file', hidden: true, ...attrs });
+      input.addEventListener('change', () => {
+        const files = [...input.files].map((file) => ({ path: file.webkitRelativePath || file.name, file }));
+        input.value = '';
+        this.emit(files, new Set());
+      });
+      return input;
+    };
+    const filesInput = pick({ multiple: true, id: 'pick-files' });
+    const folderInput = pick({ webkitdirectory: true, id: 'pick-folder' });
+
+    const box = h(
+      'div',
+      { class: 'dropzone', tabindex: '0', role: 'button', 'aria-label': 'Drop your source code here, or press Enter to choose files' },
+      h('p', { class: 'dz-title' }, 'Drop your source code here'),
+      h('p', { class: 'muted' }, 'A folder, some files, or one .zip'),
+    );
+    const buttons = h(
+      'p',
+      { class: 'dz-buttons' },
+      h('button', { type: 'button', id: 'btn-folder' }, 'Choose folder'),
+      ' ',
+      h('button', { type: 'button', id: 'btn-files' }, 'Choose files or zip'),
+    );
+    buttons.querySelector('#btn-folder').addEventListener('click', () => folderInput.click());
+    buttons.querySelector('#btn-files').addEventListener('click', () => filesInput.click());
+    box.addEventListener('click', () => filesInput.click());
+    box.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        filesInput.click();
+      }
+    });
+
+    for (const type of ['dragenter', 'dragover']) {
+      box.addEventListener(type, (e) => {
+        e.preventDefault();
+        box.classList.add('over');
+      });
+    }
+    box.addEventListener('dragleave', () => box.classList.remove('over'));
+    box.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      box.classList.remove('over');
+      // The item list is emptied once this handler yields, so take everything first.
+      const items = [...(e.dataTransfer?.items || [])].filter((i) => i.kind === 'file');
+      const taken = items.map((item) => ({ entry: item.webkitGetAsEntry?.() || null, file: item.getAsFile() }));
+      const out = [];
+      const skipped = new Set();
+      try {
+        for (const { entry, file } of taken) {
+          if (entry) await walk(entry, '', out, skipped);
+          else if (file) out.push({ path: file.webkitRelativePath || file.name, file });
+        }
+      } catch {
+        /* an unreadable entry is skipped; the rest still counts */
+      }
+      this.emit(out, skipped);
+    });
+
+    this.replaceChildren(box, buttons, filesInput, folderInput);
+  }
+
+  emit(files, skippedDirs) {
+    this.dispatchEvent(new CustomEvent('w-files', { detail: { files, skippedDirs: [...skippedDirs] } }));
+  }
+}
+
 for (const [name, cls] of [
+  ['w-dropzone', WDropzone],
   ['w-header', WHeader],
   ['w-footer', WFooter],
   ['w-status', WStatus],

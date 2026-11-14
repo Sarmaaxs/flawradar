@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check source code - Wsec</title>
+<meta name="description" content="Drop a website's source code on the page and Wsec looks for hard-coded secrets, injection and cross-site scripting patterns, weak crypto and risky settings. Nothing is stored.">
+<link rel="stylesheet" href="/assets/css/wsec.css">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<w-header current="source"></w-header>
+
+<main>
+  <h1>Check your source code</h1>
+  <p class="lead">Drop the folder (or a .zip) of your website's code. Wsec reads it for hard-coded secrets, SQL injection and cross-site scripting patterns, shell commands built from strings, weak crypto, turned-off TLS checks, and risky settings in config and dependency files.</p>
+
+  <div class="notice">
+    <b>Your code is not kept.</b> Files are sent to this server, analysed in memory and thrown away. No report is saved and there is no link to share. Secrets found in the code are shown only as the first few characters. If you would rather not upload it at all, run Wsec on your own machine, as the README describes.
+  </div>
+
+  <w-dropzone id="drop"></w-dropzone>
+  <p id="status" class="muted" role="status" aria-live="polite" hidden></p>
+  <p id="error" class="alert" role="alert" hidden></p>
+
+  <section id="result" hidden>
+    <h2>Results</h2>
+    <div class="summary">
+      <table id="counts" aria-label="Findings by severity"></table>
+      <p id="stats" class="muted"></p>
+    </div>
+    <div id="notices"></div>
+    <div class="toolbar">
+      <span>Show:</span>
+      <button type="button" data-filter="all" aria-pressed="true">All</button>
+      <button type="button" data-filter="critical" aria-pressed="false">Critical</button>
+      <button type="button" data-filter="high" aria-pressed="false">High</button>
+      <button type="button" data-filter="medium" aria-pressed="false">Medium</button>
+      <button type="button" data-filter="low" aria-pressed="false">Low</button>
+    </div>
+    <div id="findings" class="findings" data-filter="all"></div>
+  </section>
+
+  <h2>What this can and cannot do</h2>
+  <ul>
+    <li>It matches patterns line by line. It finds the common, obvious mistakes. It does not follow data from a request to a database call, so it will miss bugs that are spread over several lines or files, and logic errors such as missing permission checks.</li>
+    <li>Some matches are lookalikes. Each finding says how sure the rule is (high, medium or low confidence). Read the line before changing anything.</li>
+    <li>It does not look up known vulnerabilities in your dependencies. Run <code>npm audit</code>, <code>pip-audit</code> or <code>osv-scanner</code> for that.</li>
+    <li>A clean result means none of these patterns matched. It does not mean the code is secure.</li>
+  </ul>
+
+  <h2>Limits</h2>
+  <p id="limits" class="muted">Loading...</p>
+
+  <details>
+    <summary>All the rules (<span id="rule-count">...</span>)</summary>
+    <table id="rules" aria-label="Rules"></table>
+  </details>
+</main>
+
+<w-footer></w-footer>
+<script type="module" src="/assets/js/source.js"></script>
+</body>
+</html>

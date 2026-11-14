@@ -45,6 +45,14 @@ export const config = {
   maxQueuedScans: 50,
   retentionDays: num(env.WSEC_RETENTION_DAYS, 30),
 
+  // Source upload scanning. Code is analysed in memory and never stored.
+  sourcePerHour: num(env.WSEC_SOURCE_PER_HOUR, 20),
+  maxSourceFiles: 3000,
+  maxFileBytes: 512 * 1024,
+  maxSourceTotalBytes: 30 * 1024 * 1024,
+  maxZipBytes: 10 * 1024 * 1024,
+  maxSourceJsonBytes: 12 * 1024 * 1024,
+
   requestTimeoutMs: 10_000,
   maxPageBytes: 750_000,
   scanTimeoutMs: 90_000,

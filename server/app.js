@@ -10,12 +10,15 @@ import { listChecks } from './scanner/checks.js';
 import { buildFixConfig } from './scanner/fixes.js';
 import { startScan } from './scans.js';
 import { checkOwnership, instructions } from './verify.js';
+import { analyzeFiles, ruleCatalog } from './source/analyze.js';
+import { readZip } from './source/zip.js';
 
 const PUBLIC = path.join(config.root, 'public');
 const ID = '[a-f0-9]{24}';
 
 const scanLimiter = new Limiter({ limit: config.scansPerHour, windowMs: 3_600_000 });
 const verifyLimiter = new Limiter({ limit: config.verifyChecksPerHour, windowMs: 3_600_000 });
+const sourceLimiter = new Limiter({ limit: config.sourcePerHour, windowMs: 3_600_000 });
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -32,6 +35,7 @@ const PAGES = {
   '/whitelist': 'whitelist.html',
   '/verify': 'verify.html',
   '/checks': 'checks.html',
+  '/source': 'source.html',
   '/about': 'about.html',
 };
 
@@ -92,19 +96,30 @@ function sendText(res, status, text, extra = {}) {
   res.end(text);
 }
 
-async function readJson(req, limit = 4096) {
-  if (!String(req.headers['content-type'] || '').startsWith('application/json')) {
-    throw new AppError(415, 'unsupported_media_type', 'Send the request body as JSON.');
+async function readBody(req, limit) {
+  const declared = Number(req.headers['content-length']);
+  if (declared > limit) {
+    throw new AppError(413, 'too_large', `The upload is too large. The limit is ${Math.round(limit / 1_048_576)} MB.`);
   }
   const chunks = [];
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > limit) throw new AppError(413, 'too_large', 'The request body is too large.');
+    if (size > limit) {
+      throw new AppError(413, 'too_large', `The upload is too large. The limit is ${Math.round(limit / 1_048_576)} MB.`);
+    }
     chunks.push(chunk);
   }
+  return Buffer.concat(chunks);
+}
+
+async function readJson(req, limit = 4096) {
+  if (!String(req.headers['content-type'] || '').startsWith('application/json')) {
+    throw new AppError(415, 'unsupported_media_type', 'Send the request body as JSON.');
+  }
+  const raw = await readBody(req, limit);
   try {
-    const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    const body = JSON.parse(raw.toString('utf8'));
     if (body === null || typeof body !== 'object' || Array.isArray(body)) throw new Error('not an object');
     return body;
   } catch {
@@ -153,6 +168,24 @@ function shapeScan(row) {
       : null,
     retentionDays: config.retentionDays,
   };
+}
+
+function sourceLimits() {
+  return {
+    maxFiles: config.maxSourceFiles,
+    maxFileKb: Math.round(config.maxFileBytes / 1024),
+    maxZipMb: Math.round(config.maxZipBytes / 1_048_576),
+    maxTotalMb: Math.round(config.maxSourceTotalBytes / 1_048_576),
+  };
+}
+
+function limitSource(req) {
+  const hit = sourceLimiter.hit(clientIp(req));
+  if (!hit.ok) {
+    throw new AppError(429, 'rate_limited', `Too many source checks from your address. Try again in ${Math.ceil(hit.retryAfter / 60)} minutes.`, {
+      retryAfter: hit.retryAfter,
+    });
+  }
 }
 
 const api = {
@@ -231,6 +264,51 @@ const api = {
     sendText(res, 200, text, { 'Content-Disposition': `attachment; filename="wsec-${server}.${ext}"` });
   },
 
+  sourceRules(req, res) {
+    sendJson(res, 200, { rules: ruleCatalog(), limits: sourceLimits() });
+  },
+
+  // Source code arrives as JSON: { files: [{ path, content }] }. It is analysed
+  // in memory and thrown away. Nothing about it is stored.
+  async source(req, res) {
+    limitSource(req);
+    const body = await readJson(req, config.maxSourceJsonBytes);
+    if (!Array.isArray(body.files) || !body.files.length) {
+      throw new AppError(400, 'no_files', 'Add at least one file.');
+    }
+    if (body.files.length > config.maxSourceFiles) {
+      throw new AppError(413, 'too_many_files', `That is ${body.files.length} files. The limit is ${config.maxSourceFiles}. Drop only the source folders.`);
+    }
+    const files = [];
+    let bytes = 0;
+    for (const f of body.files) {
+      if (!f || typeof f.path !== 'string' || typeof f.content !== 'string') {
+        throw new AppError(400, 'bad_files', 'Each file needs a path and content, both as text.');
+      }
+      bytes += f.content.length;
+      if (bytes > config.maxSourceTotalBytes) {
+        throw new AppError(413, 'too_large', `Too much source. The limit is ${Math.round(config.maxSourceTotalBytes / 1_048_576)} MB of text.`);
+      }
+      files.push({ path: f.path.slice(0, 500), content: f.content });
+    }
+    sendJson(res, 200, await analyzeFiles(files));
+  },
+
+  async sourceZip(req, res) {
+    limitSource(req);
+    const type = String(req.headers['content-type'] || '');
+    if (!/^application\/(?:zip|x-zip-compressed|octet-stream)/.test(type)) {
+      throw new AppError(415, 'unsupported_media_type', 'Send the zip file as the request body.');
+    }
+    const buffer = await readBody(req, config.maxZipBytes);
+    const { files, skipped, notices } = readZip(buffer, {
+      maxEntries: config.maxSourceFiles * 4,
+      maxFileBytes: config.maxFileBytes,
+      maxTotalBytes: config.maxSourceTotalBytes,
+    });
+    sendJson(res, 200, await analyzeFiles(files, { skipped, notices }));
+  },
+
   async verify(req, res) {
     const body = await readJson(req);
     const target = parseTarget(body.host);
@@ -259,6 +337,9 @@ const routes = [
   ['POST', /^\/api\/scans$/, api.createScan],
   ['GET', new RegExp(`^/api/scans/(${ID})$`), api.getScan],
   ['GET', new RegExp(`^/api/scans/(${ID})/fix$`), api.fix],
+  ['GET', /^\/api\/source\/rules$/, api.sourceRules],
+  ['POST', /^\/api\/source$/, api.source],
+  ['POST', /^\/api\/source\/zip$/, api.sourceZip],
   ['POST', /^\/api\/verify$/, api.verify],
   ['POST', /^\/api\/verify\/check$/, api.verifyCheck],
 ];
@@ -335,7 +416,7 @@ export function createServer() {
       fail(req, res, err);
     }
   });
-  server.requestTimeout = 15_000;
+  server.requestTimeout = 60_000; // source uploads can be several MB
   server.headersTimeout = 10_000;
   return server;
 }

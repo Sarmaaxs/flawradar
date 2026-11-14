@@ -24,6 +24,9 @@
   <h2>What it will not scan</h2>
   <p>Private addresses, loopback, link-local and other reserved ranges are refused, and so is any name that resolves to one. This is checked again at connect time and at every redirect, so a DNS answer that changes between the check and the connection does not get through. Only ports 80 and 443 are used.</p>
 
+  <h2>Source code uploads</h2>
+  <p>On the <a href="/source">source code page</a>, files you drop are sent to the server, read in memory and discarded. No copy is written to disk, no report is saved, and results are shown only on that page. Secrets that match known formats are shown masked to the first three characters. The check is pattern matching, so it finds common mistakes and misses anything that needs following data through the program.</p>
+
   <h2>What it cannot tell you</h2>
   <ul>
     <li>It looks at the home page. A header missing from the home page may be present elsewhere, and the reverse.</li>
