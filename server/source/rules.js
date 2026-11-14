@@ -422,10 +422,21 @@ export const FILE_CHECKS = [
   },
 ];
 
+/** Synthetic rule shown in the catalog for OSV-based dependency findings. */
+export const CVE_RULE = {
+  id: 'cve-known',
+  title: 'Known vulnerability in a dependency',
+  severity: 'high',
+  confidence: 'high',
+  why: 'A package version in your lockfile or requirements is listed in the OSV vulnerability database.',
+  fix: 'Upgrade the package to a fixed version and refresh the lockfile.',
+};
+
 export function ruleCatalog() {
   const lang = (exts) => (!exts ? 'any' : exts === JS ? 'JavaScript' : exts === PY ? 'Python' : exts === PHP ? 'PHP' : exts === MARKUP ? 'HTML and templates' : exts.join(', '));
   return [
     ...RULES.map(({ id, title, severity, confidence, exts }) => ({ id, title, severity, confidence, applies: lang(exts) })),
     ...FILE_CHECKS.map(({ id, title, severity, confidence }) => ({ id, title, severity, confidence, applies: 'whole file' })),
+    { id: CVE_RULE.id, title: CVE_RULE.title, severity: CVE_RULE.severity, confidence: CVE_RULE.confidence, applies: 'dependencies (OSV)' },
   ];
 }

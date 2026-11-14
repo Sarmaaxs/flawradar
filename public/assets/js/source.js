@@ -166,7 +166,10 @@ function render(r) {
     ...SEVERITIES.map((k) => h('tr', {}, h('th', { scope: 'row' }, k[0].toUpperCase() + k.slice(1)), h('td', {}, String(s[k])))),
   );
   const st = r.stats;
-  $('#stats').textContent = `${st.filesScanned} files and ${st.lines.toLocaleString('en-US')} lines read, ${st.filesSkipped} skipped, ${st.rules} line rules plus file checks, ${(st.durationMs / 1000).toFixed(1)} seconds.`;
+  const pkgBit = st.packagesChecked
+    ? `, ${st.packagesChecked} package version${st.packagesChecked === 1 ? '' : 's'} checked for known CVEs`
+    : '';
+  $('#stats').textContent = `${st.filesScanned} files and ${st.lines.toLocaleString('en-US')} lines read, ${st.filesSkipped} skipped, ${st.rules} line rules plus file checks${pkgBit}, ${(st.durationMs / 1000).toFixed(1)} seconds.`;
   $('#notices').replaceChildren(...r.notices.map((n) => h('p', { class: 'alert note' }, n)));
 
   const list = $('#findings');

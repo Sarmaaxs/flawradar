@@ -128,7 +128,7 @@ The web interface is built without `innerHTML`, and the site serves a strict Con
 
 The rules in `server/source/rules.js` match one line at a time. They find common mistakes and do not follow data from a request into a database call, so multi-line and cross-file bugs, and logic errors such as missing permission checks, are not found. Each rule has a confidence level because some matches are lookalikes.
 
-It does not look up known vulnerabilities in dependencies. That needs a vulnerability database (OSV, the npm advisory database). Run `npm audit`, `pip-audit` or `osv-scanner` for it.
+Known vulnerabilities in dependencies are looked up via the OSV API when a `package-lock.json` or pinned `requirements.txt` is present (and, less precisely, from `package.json` version ranges if no lockfile exists). The lookup is best-effort: if OSV is unreachable the scan still finishes and a notice is shown. Coverage is not complete — also run `npm audit`, `pip-audit` or `osv-scanner` in CI.
 
 Uploads are limited to 3000 files, 512 KB per file, 30 MB of text and a 10 MB zip (see `server/config.js`). Folders like `node_modules`, `.git`, `vendor`, `dist` and `build` are skipped, and lines over 1000 characters (minified code) are skipped. Zips are read in memory with a hard cap on how far any entry may inflate.
 

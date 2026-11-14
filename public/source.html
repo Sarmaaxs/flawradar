@@ -52,7 +52,7 @@
   <ul>
     <li>It matches patterns line by line. It finds the common, obvious mistakes. It does not follow data from a request to a database call, so it will miss bugs that are spread over several lines or files, and logic errors such as missing permission checks.</li>
     <li>Some matches are lookalikes. Each finding says how sure the rule is (high, medium or low confidence). Read the line before changing anything.</li>
-    <li>It does not look up known vulnerabilities in your dependencies. Run <code>npm audit</code>, <code>pip-audit</code> or <code>osv-scanner</code> for that.</li>
+    <li>It looks up known vulnerabilities in dependencies via the OSV database when a lockfile or pinned requirements file is present. Coverage is not complete; also run <code>npm audit</code>, <code>pip-audit</code> or <code>osv-scanner</code> in CI.</li>
     <li>A clean result means none of these patterns matched. It does not mean the code is secure.</li>
   </ul>
 

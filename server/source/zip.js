@@ -62,9 +62,15 @@ export function readZip(buffer, { maxEntries, maxFileBytes, maxTotalBytes }) {
       continue;
     }
     const reason = skipReason(path);
-    if (reason) {
+    // Keep dependency manifests so CVE lookup can read them; everything else that
+    // skipReason flags is dropped without inflating.
+    const keepForCve = /(?:^|\/)(?:package-lock\.json|package\.json|requirements[\w.-]*\.txt)$/i.test(path);
+    if (reason && !keepForCve) {
       skipped.push({ path, reason });
       continue;
+    }
+    if (reason && keepForCve) {
+      skipped.push({ path, reason }); // still recorded as skipped for line rules
     }
     if (flags & 1) {
       skipped.push({ path, reason: 'encrypted' });
