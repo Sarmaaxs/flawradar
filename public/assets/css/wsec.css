@@ -70,7 +70,9 @@ hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5rem 0; }
 }
 .site-head .brand span { margin-left: .8rem; color: var(--muted); font-style: italic; }
 .site-head nav { margin-top: .8rem; font: .9rem var(--sans); }
-.site-head nav b { text-decoration: underline; }
+/* Every menu item looks the same, no blue link look. The page you are on is shown inverted. */
+.site-head nav a, .site-head nav b { padding: .1rem .4rem; text-decoration: none; }
+.site-head nav b { background: var(--ink); color: var(--paper); font-weight: 400; }
 
 .site-foot {
   margin-top: 3rem;
