@@ -130,7 +130,7 @@ async function readJson(req, limit = 4096) {
   }
 }
 
-async function serveFile(req, res, relative, { cache = 'public, max-age=300', extra = {} } = {}) {
+async function serveFile(req, res, relative, { cache = 'no-cache', extra = {} } = {}) {
   const full = path.resolve(PUBLIC, `.${path.sep}${relative}`);
   if (!full.startsWith(PUBLIC + path.sep) || relative.includes('\0')) throw new AppError(404, 'not_found', 'Not found.');
   let stat;
@@ -140,12 +140,24 @@ async function serveFile(req, res, relative, { cache = 'public, max-age=300', ex
     throw new AppError(404, 'not_found', 'Not found.');
   }
   if (!stat.isFile()) throw new AppError(404, 'not_found', 'Not found.');
-  res.writeHead(200, {
+  // no-cache means "ask me every time": the browser keeps a copy but revalidates it, and gets a
+  // cheap 304 when the file did not change. Updated CSS and JS show up on the next load.
+  const etag = `W/"${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}"`;
+  const headers = {
     ...securityHeaders(),
+    'Cache-Control': cache,
+    ETag: etag,
+    'Last-Modified': stat.mtime.toUTCString(),
+    ...extra,
+  };
+  if (req.headers['if-none-match'] === etag) {
+    res.writeHead(304, headers);
+    return res.end();
+  }
+  res.writeHead(200, {
+    ...headers,
     'Content-Type': MIME[path.extname(full)] || 'application/octet-stream',
     'Content-Length': stat.size,
-    'Cache-Control': cache,
-    ...extra,
   });
   if (req.method === 'HEAD') return res.end();
   fs.createReadStream(full).pipe(res);
