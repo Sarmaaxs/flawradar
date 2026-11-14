@@ -11,12 +11,12 @@ export function queueLength() {
   return queue.length;
 }
 
-export function startScan(target, { deep = false } = {}) {
+export function startScan(target, { deep = false, termsVersion = null } = {}) {
   if (queue.length >= config.maxQueuedScans) {
     throw new AppError(503, 'busy', 'Wsec is busy. Try again in a minute.');
   }
   const id = crypto.randomBytes(12).toString('hex');
-  db.insertScan({ id, host: target.host, url: target.input, deep, createdAt: Date.now() });
+  db.insertScan({ id, host: target.host, url: target.input, deep, createdAt: Date.now(), termsVersion });
   queue.push({ id, target, deep });
   pump();
   return id;

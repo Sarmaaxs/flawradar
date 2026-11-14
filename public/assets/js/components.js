@@ -25,7 +25,13 @@ class WHeader extends HTMLElement {
     });
     nav.append(' ]');
     this.replaceChildren(
-      h('header', { class: 'site-head' }, h('div', { class: 'brand' }, h('a', { href: '/' }, 'Wsec'), h('span', {}, 'web security checker')), nav),
+      h(
+        'header',
+        { class: 'site-head' },
+        // The space and the dash are real text, so the name reads "Wsec - Web Security Checker" everywhere.
+        h('div', { class: 'brand' }, h('a', { href: '/' }, 'Wsec'), ' ', h('span', { class: 'tag' }, '— Web Security Checker')),
+        nav,
+      ),
     );
   }
 }
@@ -39,7 +45,15 @@ class WFooter extends HTMLElement {
       h(
         'footer',
         { class: 'site-foot' },
-        h('p', {}, 'Wsec makes read-only requests from the addresses on the ', h('a', { href: '/whitelist' }, 'whitelist'), ' page. ', h('a', { href: '/about' }, 'What it sends and what it keeps.')),
+        h(
+          'p',
+          {},
+          h('a', { href: '/terms' }, 'Terms of Service'), ' | ',
+          h('a', { href: '/acceptable-use' }, 'Acceptable Use'), ' | ',
+          h('a', { href: '/privacy' }, 'Privacy'), ' | ',
+          h('a', { href: '/about' }, 'About'),
+        ),
+        h('p', {}, 'Test only what you own or have written permission to test. Reports are information, not a guarantee of security.'),
       ),
     );
   }

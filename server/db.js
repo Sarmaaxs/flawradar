@@ -32,9 +32,14 @@ db.exec(`
   );
 `);
 
+// Databases created before terms were recorded get the column added.
+if (!db.prepare('PRAGMA table_info(scans)').all().some((c) => c.name === 'terms_version')) {
+  db.exec('ALTER TABLE scans ADD COLUMN terms_version TEXT');
+}
+
 const q = {
   insert: db.prepare(
-    'INSERT INTO scans (id, host, url, deep, status, progress, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO scans (id, host, url, deep, status, progress, created_at, terms_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
   ),
   status: db.prepare('UPDATE scans SET status = ? WHERE id = ?'),
   progress: db.prepare('UPDATE scans SET progress = ? WHERE id = ?'),
@@ -56,8 +61,8 @@ const q = {
   ),
 };
 
-export function insertScan({ id, host, url, deep, createdAt }) {
-  q.insert.run(id, host, url, deep ? 1 : 0, 'queued', '[]', createdAt);
+export function insertScan({ id, host, url, deep, createdAt, termsVersion }) {
+  q.insert.run(id, host, url, deep ? 1 : 0, 'queued', '[]', createdAt, termsVersion ?? null);
 }
 export const setStatus = (id, status) => q.status.run(status, id);
 export const setProgress = (id, steps) => q.progress.run(JSON.stringify(steps), id);

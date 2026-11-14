@@ -37,6 +37,9 @@ const PAGES = {
   '/checks': 'checks.html',
   '/source': 'source.html',
   '/about': 'about.html',
+  '/terms': 'terms.html',
+  '/acceptable-use': 'acceptable-use.html',
+  '/privacy': 'privacy.html',
 };
 
 // The site follows the advice it gives.
@@ -179,6 +182,18 @@ function sourceLimits() {
   };
 }
 
+// People must confirm authorization and accept the current terms before anything is scanned.
+// The client sends the version it showed them; a stale page is refused so it cannot accept old text.
+function requireTerms(version) {
+  if (version !== config.termsVersion) {
+    throw new AppError(
+      400,
+      'terms_required',
+      'Confirm that you are authorized to test this and that you accept the Terms of Service, then try again. If you already did, reload the page: the terms may have changed.',
+    );
+  }
+}
+
 function limitSource(req) {
   const hit = sourceLimiter.hit(clientIp(req));
   if (!hit.ok) {
@@ -201,6 +216,23 @@ const api = {
       ips: config.publicIps,
       contact: config.contact || null,
       baseUrl: config.baseUrl,
+      termsVersion: config.termsVersion,
+      legal: {
+        entity: config.legal.entity || null,
+        address: config.legal.address || null,
+        email: config.legal.email || null,
+        law: config.legal.law || null,
+        arbitration: config.legal.arbitration || null,
+        hosting: config.legal.hosting || null,
+        logRetention: config.legal.logRetention || null,
+        updated: config.termsVersion,
+      },
+      limits: {
+        scansPerHour: config.scansPerHour,
+        scansPerHostPerHour: config.scansPerHostPerHour,
+        sourcePerHour: config.sourcePerHour,
+        retentionDays: config.retentionDays,
+      },
     });
   },
 
@@ -220,6 +252,7 @@ const api = {
       );
     }
     const body = await readJson(req);
+    requireTerms(body.terms);
     const target = parseTarget(body.url);
     await resolvePublic(target.host);
 
@@ -240,7 +273,7 @@ const api = {
         });
       }
     }
-    const id = startScan(target, { deep });
+    const id = startScan(target, { deep, termsVersion: body.terms });
     sendJson(res, 202, { id, status: 'queued' }, { Location: `/report/${id}` });
   },
 
@@ -273,6 +306,7 @@ const api = {
   async source(req, res) {
     limitSource(req);
     const body = await readJson(req, config.maxSourceJsonBytes);
+    requireTerms(body.terms);
     if (!Array.isArray(body.files) || !body.files.length) {
       throw new AppError(400, 'no_files', 'Add at least one file.');
     }
@@ -296,6 +330,7 @@ const api = {
 
   async sourceZip(req, res) {
     limitSource(req);
+    requireTerms(req.headers['x-wsec-terms']);
     const type = String(req.headers['content-type'] || '');
     if (!/^application\/(?:zip|x-zip-compressed|octet-stream)/.test(type)) {
       throw new AppError(415, 'unsupported_media_type', 'Send the zip file as the request body.');

@@ -56,6 +56,27 @@ export const config = {
   requestTimeoutMs: 10_000,
   maxPageBytes: 750_000,
   scanTimeoutMs: 90_000,
+
+  // Hosts whose owners asked not to be scanned (see the Acceptable Use Policy). A listed
+  // name also covers its subdomains. Comma separated, applied after a restart.
+  blockedHosts: list(env.WSEC_BLOCKED_HOSTS).map((h) => h.toLowerCase().replace(/^\.+|\.+$/g, '')),
+
+  // The version of the Terms, Acceptable Use Policy and Privacy Policy that people accept
+  // before a scan. Change it whenever you change those pages in a way that matters; everyone
+  // then has to accept again. The scan record keeps the version that was accepted.
+  termsVersion: '2026-11-14',
+
+  // Filled into the legal pages. Anything left empty shows as a highlighted
+  // placeholder on the page, so you can see what still needs completing.
+  legal: {
+    entity: env.WSEC_LEGAL_ENTITY || '',
+    address: env.WSEC_LEGAL_ADDRESS || '',
+    email: env.WSEC_LEGAL_EMAIL || '',
+    law: env.WSEC_LEGAL_LAW || '',
+    arbitration: env.WSEC_LEGAL_ARBITRATION || '',
+    hosting: env.WSEC_LEGAL_HOSTING || '',
+    logRetention: env.WSEC_LEGAL_LOG_RETENTION || '',
+  },
 };
 
 export function userAgent() {

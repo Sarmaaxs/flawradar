@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Wsec - web security checker</title>
-<meta name="description" content="Check a website's TLS, headers, cookies and DNS settings. Read-only, from fixed IP addresses you can whitelist.">
+<title>Wsec - Web Security Checker</title>
+<meta name="description" content="Check a website's TLS, headers, cookies and DNS settings, or drop in your source code. Read-only, from fixed IP addresses you can whitelist.">
 <link rel="stylesheet" href="/assets/css/wsec.css">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 </head>
@@ -12,56 +12,107 @@
 <w-header current="scan"></w-header>
 
 <main>
-  <h1>Check a website's security settings</h1>
-  <p class="lead">Type an address. Wsec loads the home page the way a browser does, then looks at the certificate, response headers, cookies, DNS records and a few well-known files. You get a list of what to change, with configuration you can paste into nginx, Apache or Express.</p>
+  <h1>Check your website's security</h1>
+  <p class="lead">Enter an address. Wsec reads the site's certificate, headers, cookies and DNS records, then gives you a short list of fixes you can paste into your server configuration.</p>
 
   <form id="scan-form" novalidate>
     <fieldset>
-      <legend>New scan</legend>
+      <legend>Scan a website</legend>
       <label for="url">Website address</label>
-      <div class="row">
-        <input id="url" name="url" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="example.com" required>
-        <button type="submit" id="go">Run scan</button>
-      </div>
+      <input id="url" name="url" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="example.com" required>
+
       <div class="check">
         <input id="deep" name="deep" type="checkbox">
-        <label for="deep" class="plain-label">Also run the deep checks: exposed files such as <code>.git</code> and <code>.env</code>, directory listings and HTTP methods. This sends about twenty extra requests and needs proof that you control the site. <a href="/verify">How proof works.</a></label>
+        <label for="deep">Include deep checks (exposed <code>.git</code> and <code>.env</code> files, directory listings, HTTP methods). Needs proof that you control the site. <a href="/verify">Read how the proof works</a>.</label>
       </div>
+
+      <div id="consent-box" class="consent">
+        <div class="check">
+          <input id="terms" name="terms" type="checkbox" required>
+          <label for="terms">I own this website or have written permission to test it, and I accept the <a href="/terms">Terms of Service</a>, the <a href="/acceptable-use">Acceptable Use Policy</a> and the <a href="/privacy">Privacy Policy</a>.</label>
+        </div>
+      </div>
+
+      <p class="actions"><button type="submit" id="go">Run scan</button></p>
       <p id="error" class="alert" role="alert" hidden></p>
     </fieldset>
   </form>
 
-  <p>Have the code rather than a live site? <a href="/source">Drop your source code</a> and Wsec checks it for hard-coded secrets, injection and XSS patterns and risky settings. Nothing is stored.</p>
+  <div class="two">
+    <div class="box">
+      <h3>Have code, not a live site?</h3>
+      <p>Drop a folder or a .zip. Wsec looks for hard-coded secrets, injection and XSS patterns, and risky settings. Your code is not stored.</p>
+      <p><a class="button" href="/source">Check source code</a></p>
+    </div>
+    <div class="box">
+      <h3>Does your firewall block scanners?</h3>
+      <p>Allow Wsec's fixed IP addresses and get ready-made rules for nginx, Cloudflare, fail2ban and more.</p>
+      <p><a class="button" href="/whitelist">Get scanner IPs and rules</a></p>
+    </div>
+  </div>
 
-  <p><small>Only public sites can be scanned. Addresses that point at private or internal networks are refused. Each scan starts at the home page of the host you enter.</small></p>
+  <h2>What you get</h2>
+  <table>
+    <thead><tr><th scope="col">Feature</th><th scope="col">What it does</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">29 website checks</th><td>HTTPS, redirects, certificate, TLS versions, security headers, cookies, CORS, mixed content, SPF, DMARC, CAA and security.txt.</td></tr>
+      <tr><th scope="row">Fixes you can paste</th><td>Each problem comes with the setting to change. Download all header fixes as one nginx, Apache or Express file.</td></tr>
+      <tr><th scope="row">Scanner whitelist</th><td>Fixed IP addresses and a user agent, so your firewall lets the scan through.</td></tr>
+      <tr><th scope="row">Source code check</th><td>63 rules across JavaScript, Python, PHP, HTML and config files. Nothing is kept.</td></tr>
+      <tr><th scope="row">Score and history</th><td>A grade out of 100, and the change since your last scan of the same site.</td></tr>
+    </tbody>
+  </table>
+  <p><a href="/checks">See every check and why it matters</a></p>
 
-  <h2>What it looks at</h2>
-  <dl class="plain">
-    <dt>Transport</dt>
-    <dd>HTTPS availability, the redirect from HTTP, certificate validity and key size, and whether TLS 1.0 and 1.1 are still accepted.</dd>
-    <dt>Headers</dt>
-    <dd>HSTS, Content-Security-Policy, X-Content-Type-Options, clickjacking protection, Referrer-Policy, Permissions-Policy, CORS, and version numbers in the Server header.</dd>
-    <dt>Cookies</dt>
-    <dd>Secure, HttpOnly and SameSite flags.</dd>
-    <dt>Content</dt>
-    <dd>Mixed content, scripts loaded from other sites without integrity hashes, and password forms.</dd>
-    <dt>DNS and mail</dt>
-    <dd>SPF, DMARC, CAA, and a security.txt file.</dd>
-    <dt>Exposure (deep scan)</dt>
-    <dd>Exposed Git directories, environment files, backups, debug pages, directory listings, and risky HTTP methods.</dd>
-  </dl>
-  <p><a href="/checks">The full list, with the reason for each check.</a></p>
-
-  <h2>If your firewall blocks the scan</h2>
-  <p>Bot filters and web application firewalls often block scanners they have not seen before. When that happens Wsec says so instead of grading the firewall's error page. Add the scanner addresses to your allow list and run it again. The <a href="/whitelist">whitelist page</a> has the addresses, the user agent string, and ready-made rules for nginx, ModSecurity, fail2ban, ufw and Cloudflare.</p>
-
-  <h2>How a scan runs</h2>
-  <ol class="plain">
-    <li>Wsec resolves the host name and refuses anything that points at a private network.</li>
-    <li>It requests the home page over HTTPS, falling back to HTTP, and reads the headers and cookies.</li>
-    <li>In parallel it opens a TLS connection, makes one request to port 80, reads DNS records and looks for <code>/.well-known/security.txt</code>.</li>
-    <li>Each check is scored. Failures cost points by severity, and the report gives the fix for each one.</li>
-  </ol>
+  <h2>Questions</h2>
+  <div class="faq">
+    <details>
+      <summary>How does a scan work?</summary>
+      <div class="answer">
+        <ol class="plain">
+          <li>Wsec looks up the host name and refuses anything that points at a private network.</li>
+          <li>It loads the home page over HTTPS, falling back to HTTP, and reads the headers and cookies.</li>
+          <li>At the same time it opens a TLS connection, makes one request to port 80, reads DNS records, and looks for <code>/.well-known/security.txt</code>.</li>
+          <li>Each check is scored, and the report lists the fix for every problem.</li>
+        </ol>
+      </div>
+    </details>
+    <details>
+      <summary>What does Wsec look at?</summary>
+      <div class="answer">
+        <dl class="plain">
+          <dt>Transport</dt>
+          <dd>HTTPS, the redirect from HTTP, certificate validity and key size, and whether TLS 1.0 and 1.1 are still accepted.</dd>
+          <dt>Headers</dt>
+          <dd>HSTS, Content-Security-Policy, X-Content-Type-Options, clickjacking protection, Referrer-Policy, Permissions-Policy, CORS, and version numbers in the Server header.</dd>
+          <dt>Cookies and content</dt>
+          <dd>Secure, HttpOnly and SameSite flags, mixed content, third-party scripts without integrity hashes, and password forms.</dd>
+          <dt>DNS and mail</dt>
+          <dd>SPF, DMARC, CAA and security.txt.</dd>
+          <dt>Exposure (deep scan only)</dt>
+          <dd>Exposed Git folders, environment files, backups, debug pages, directory listings and risky HTTP methods.</dd>
+        </dl>
+      </div>
+    </details>
+    <details>
+      <summary>My firewall blocked the scan. What now?</summary>
+      <div class="answer">
+        <p>Bot filters and web application firewalls often block scanners they have not seen before. When that happens Wsec says so instead of grading the firewall's error page. Add the scanner addresses to your allow list and scan again. The <a href="/whitelist">whitelist page</a> has the addresses and the rules.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Can I scan any website?</summary>
+      <div class="answer">
+        <p>No. Scan only sites you own or have written permission to test. Scanning someone else's site without permission can be illegal. Only public sites can be scanned, and Wsec refuses private and internal addresses. Site owners can ask to be excluded; see the <a href="/acceptable-use#abuse">Acceptable Use Policy</a>.</p>
+      </div>
+    </details>
+    <details>
+      <summary>What does Wsec send and keep?</summary>
+      <div class="answer">
+        <p>A normal scan makes about eight read-only requests. Reports are kept for a limited time and then deleted. Uploaded source code is analysed in memory and never stored. Wsec sets no cookies. The <a href="/privacy">Privacy Policy</a> lists every kind of data and how long it is kept.</p>
+      </div>
+    </details>
+  </div>
 </main>
 
 <w-footer></w-footer>

@@ -37,6 +37,40 @@ export async function api(path, options = {}) {
   return data;
 }
 
+let infoPromise = null;
+/** Scanner details from the server, including the version of the terms. Fetched once. */
+export function scannerInfo() {
+  if (!infoPromise) infoPromise = api('/api/scanner');
+  return infoPromise;
+}
+
+const TERMS_KEY = 'wsec-terms-accepted';
+
+/** The terms version this browser has accepted before, or null. Storage may be blocked, so every access is guarded. */
+export function rememberedTerms() {
+  try {
+    return localStorage.getItem(TERMS_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function rememberTerms(version) {
+  try {
+    localStorage.setItem(TERMS_KEY, version);
+  } catch {
+    /* the box is simply shown again next time */
+  }
+}
+
+export function forgetTerms() {
+  try {
+    localStorage.removeItem(TERMS_KEY);
+  } catch {
+    /* nothing to do */
+  }
+}
+
 export function formatDate(ms) {
   return `${new Date(ms).toISOString().replace('T', ' ').slice(0, 16)} UTC`;
 }

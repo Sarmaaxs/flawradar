@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acceptable Use Policy - Wsec</title>
+<meta name="description" content="What you may and may not do with Wsec: authorization, prohibited use, rate limits, abuse reports and how site owners can opt out.">
+<link rel="stylesheet" href="/assets/css/wsec.css">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<w-header current="legal"></w-header>
+
+<main class="legal">
+  <h1>Acceptable Use Policy</h1>
+  <p class="doc-meta">Version <span class="fill unset" data-legal="termsVersion">[VERSION]</span>. This policy is part of the <a href="/terms">Terms of Service</a>.</p>
+
+  <div class="summary-box">
+    <b>In short.</b> Test only what is yours, or what you have written permission to test. Do not use Wsec to attack, overload, spy on or harvest data about anyone, and do not try to get around its safeguards.
+  </div>
+
+  <ol class="toc">
+    <li><a href="#purpose">Purpose and Scope</a></li>
+    <li><a href="#authorization">Authorization Is Required</a></li>
+    <li><a href="#prohibited">Prohibited Use</a></li>
+    <li><a href="#limits">Rate and Resource Limits</a></li>
+    <li><a href="#deep">Deep Checks and Ownership Proof</a></li>
+    <li><a href="#source">Source Code Uploads</a></li>
+    <li><a href="#findings">Handling What You Find</a></li>
+    <li><a href="#abuse">Reporting Abuse and Opting a Site Out</a></li>
+    <li><a href="#research">Reporting a Problem in Wsec Itself</a></li>
+    <li><a href="#enforcement">Enforcement</a></li>
+    <li><a href="#contact">Changes and Contact</a></li>
+  </ol>
+
+  <h2 id="purpose">Purpose and Scope</h2>
+  <div class="c">Wsec exists to help people check the security of their own websites and code. This Acceptable Use Policy (the "Policy") says how the Service may be used. It applies to everyone who uses the Service, including through scripts or the API. Words defined in the <a href="/terms">Terms of Service</a> have the same meaning here.</div>
+  <div class="c">Security tools can be used for good and for harm. We take misuse seriously, and we may act on it as described in this Policy.</div>
+
+  <h2 id="authorization">Authorization Is Required</h2>
+  <div class="c">You may scan only a Target that you own, or for which the owner has given you <b>express written permission</b> to run the kind of tests Wsec runs. Permission must come from a person who has the right to give it, and it must still be in force when you scan.</div>
+  <div class="c">Where a Target runs on infrastructure owned by someone else (shared hosting, a cloud platform, a content-delivery network, a managed firewall), check whether that provider's terms require notice or approval for security testing, and obtain it where they do.</div>
+  <div class="c">Keep your evidence of permission (for example an email, a signed statement of work, or a written approval from the site owner) for as long as the law or your contract requires, and be ready to show it if we or the Target's owner ask.</div>
+  <div class="c">Examples of acceptable use: scanning your own company website; scanning a client's site under a written agreement that covers testing; scanning a staging site you run; checking the source code of your own project.</div>
+
+  <h2 id="prohibited">Prohibited Use</h2>
+  <div class="c">You must not use the Service, or help or allow anyone else to use it, to do any of the following.</div>
+  <div class="c"><b>Unauthorized scanning.</b>
+    <ul>
+      <li>Scan a Target without the authorization described above, including a Target you are curious about, a competitor's site, a site you are hoping to report a bug on for a reward, or a site that has said it does not want to be scanned.</li>
+      <li>Scan a Target after permission has been withdrawn or has run out.</li>
+      <li>Give a false statement about ownership, authority or consent, or use another person's ownership proof.</li>
+    </ul>
+  </div>
+  <div class="c"><b>Denial of service and abuse of resources.</b>
+    <ul>
+      <li>Overload, disrupt or degrade a Target, the Service or any network, including by repeated or concurrent scans of the same Target, by using many sources, or by using the Service as a way to amplify traffic.</li>
+      <li>Run scans or uploads in an automated way that goes beyond reasonable personal use, or use more than one connection, address, device or identity to get around a rate limit.</li>
+    </ul>
+  </div>
+  <div class="c"><b>Scraping, mass scanning and malicious reconnaissance.</b>
+    <ul>
+      <li>Collect Reports, scan results, check lists or other content from the Service in bulk, or build a database from them.</li>
+      <li>Use the Service to scan many Targets in sequence to find vulnerable sites, to map an organization's systems, or to gather information in preparation for an attack, fraud, extortion, harassment or other harm.</li>
+      <li>Scan address ranges, lists of host names, or Targets chosen by a pattern rather than because you are entitled to test them.</li>
+    </ul>
+  </div>
+  <div class="c"><b>Attacks on Wsec and its safeguards.</b>
+    <ul>
+      <li>Try to make the Service connect to private, internal or reserved addresses, to the Service's own infrastructure, or to cloud metadata services, or try to defeat the checks that prevent that, including by DNS tricks and redirects.</li>
+      <li>Defeat, probe beyond what the <a href="#research">section on reporting problems</a> allows, or bypass any rate limit, ownership verification, terms confirmation, access control or other safeguard.</li>
+      <li>Upload files designed to damage, overload or exploit the Service, such as malware, archive bombs or content crafted to crash a parser.</li>
+    </ul>
+  </div>
+  <div class="c"><b>Targets and content that are off limits.</b>
+    <ul>
+      <li>Scan systems that run critical infrastructure or emergency, health, safety, military or government services, unless you are authorized to test them in writing by the operator.</li>
+      <li>Target a private individual's personal site or device in order to expose, track, harass or harm them.</li>
+      <li>Upload content you have no right to share, personal data of other people, credentials for systems you are not authorized to access, or material that is unlawful.</li>
+    </ul>
+  </div>
+  <div class="c"><b>Misuse of output and of the Service.</b>
+    <ul>
+      <li>Use findings to threaten, blackmail or pressure a site owner, or to exploit a vulnerability.</li>
+      <li>Present a Report as a certification, audit or compliance attestation, or as proof of security.</li>
+      <li>Resell, white-label, sublicense or provide the Service to others as your own, or use it to build a competing product, without our written permission.</li>
+      <li>Use the Service in breach of any law, regulation, sanction or third-party right.</li>
+    </ul>
+  </div>
+
+  <h2 id="limits">Rate and Resource Limits</h2>
+  <div class="c">To keep the Service fair and safe, current limits are: up to <span class="fill" data-legal="scansPerHour">a set number of</span> website scans per visitor per hour; up to <span class="fill" data-legal="scansPerHostPerHour">a set number of</span> scans of the same host per hour, from all visitors together; and up to <span class="fill" data-legal="sourcePerHour">a set number of</span> source code checks per visitor per hour. Upload sizes and file counts are limited as shown on the <a href="/source">source code page</a>.</div>
+  <div class="c">We may change the limits at any time. Getting around them is a breach of this Policy. If you need more capacity for legitimate work, contact us.</div>
+
+  <h2 id="deep">Deep Checks and Ownership Proof</h2>
+  <div class="c">Deep checks request files that should not be public, such as version-control folders, environment files and backups. They run only on a host for which you have shown control by publishing the verification file or DNS record described on the <a href="/verify">Verify page</a>. The proof is checked again before every deep scan. Remove the proof when you no longer want deep scans to run.</div>
+  <div class="c">Do not place the proof on a host you do not control, do not use proof that belongs to another host or person, and do not ask someone else to publish proof for a host that is not theirs.</div>
+
+  <h2 id="source">Source Code Uploads</h2>
+  <div class="c">Upload only code that you wrote, own, or are licensed or otherwise permitted to share for this purpose. Remove secrets and personal data before you upload where you can. If code belongs to your employer or a client, make sure that you may upload it. The Service handles uploads as described in the <a href="/privacy">Privacy Policy</a>, but you remain responsible for deciding whether an upload is appropriate.</div>
+
+  <h2 id="findings">Handling What You Find</h2>
+  <div class="c">If a scan shows you a weakness in a system that someone else owns, or exposes data that belongs to others, stop, do not copy or use the data, and tell the owner. Do not publish details of a weakness in a system you do not own, or use it for gain, before the owner has had reasonable time to fix it. This section does not make a scan of a Target you were not authorized to test acceptable.</div>
+
+  <h2 id="abuse">Reporting Abuse and Opting a Site Out</h2>
+  <div class="c">If you think Wsec has been used against a system you own or run without permission, or you see a breach of this Policy, write to <span class="fill unset" data-legal="email">[CONTACT EMAIL]</span> with the host name, the approximate time (in UTC), and the address that Wsec's requests came from if you have it. Wsec's requests carry a "Wsec-Scanner" user agent and come from the addresses on the <a href="/whitelist">Whitelist page</a>.</div>
+  <div class="c"><b>Opt-out for site owners.</b> If you control a host and do not want Wsec to scan it, ask us to block it. Tell us the host name and give us a way to confirm that you control it, such as placing a short text we send you at a path on the host or in a DNS record. We will block the host from further scans as soon as we reasonably can. Blocking a host does not affect any legal right you have.</div>
+  <div class="c">We will look at reports in good faith and without charge. We may share information about the scans of a host with its owner or hosting provider, and with authorities where the law requires or allows it.</div>
+
+  <h2 id="research">Reporting a Problem in Wsec Itself</h2>
+  <div class="c">If you find a security problem in the Service, please tell us privately at <span class="fill unset" data-legal="email">[CONTACT EMAIL]</span> before telling anyone else. Give us reasonable time to fix it. While you research, do not access, change or destroy data that is not yours, do not disrupt the Service for other people, do not run automated high-volume tests, and do not use a problem for any purpose other than reporting it. We will not take legal action against research that stays within this section and is carried out in good faith, but we cannot speak for others and we cannot promise protection where the law does not allow us to give it.</div>
+
+  <h2 id="enforcement">Enforcement</h2>
+  <div class="c">If we believe that this Policy has been or may be breached, we may, without notice and in our sole discretion: refuse or stop a scan or upload; block an IP address, a Target or an ownership proof; remove Reports; limit or end access to the Service; tell a Target's owner, its hosting provider or other affected parties; report the matter to law enforcement or other authorities; and take any other action that we think necessary to protect the Service or others.</div>
+  <div class="c">We are not required to monitor how the Service is used, and not acting on a breach does not waive our rights. You are responsible for any harm caused by your use of the Service, and the indemnification and liability sections of the <a href="/terms">Terms of Service</a> apply to any breach of this Policy.</div>
+
+  <h2 id="contact">Changes and Contact</h2>
+  <div class="c">We may update this Policy. The version date at the top shows the current version, and the Terms of Service describe how changes take effect.</div>
+  <div class="c"><span class="fill unset" data-legal="entity">[OPERATOR NAME]</span><br>Email: <span class="fill unset" data-legal="email">[CONTACT EMAIL]</span></div>
+
+  <p class="legal-links"><a href="/terms">Terms of Service</a> | <a href="/privacy">Privacy Policy</a> | <a href="/about">About Wsec</a></p>
+</main>
+
+<w-footer></w-footer>
+<script type="module" src="/assets/js/legal.js"></script>
+</body>
+</html>

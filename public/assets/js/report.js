@@ -1,5 +1,5 @@
 import { codeTabs } from './components.js';
-import { api, formatDate, h, safeHttpsUrl } from './dom.js';
+import { api, formatDate, h, rememberedTerms, safeHttpsUrl, scannerInfo } from './dom.js';
 
 const id = location.pathname.split('/').pop();
 const $ = (sel) => document.querySelector(sel);
@@ -169,7 +169,14 @@ $('#rescan').addEventListener('click', async (event) => {
   const button = event.currentTarget;
   button.disabled = true;
   try {
-    const next = await api('/api/scans', { method: 'POST', body: JSON.stringify({ url: scan.host, deep: scan.deep }) });
+    // A new scan needs the person's confirmation. If this browser has not accepted the current
+    // terms, send them to the form instead of confirming on their behalf.
+    const version = (await scannerInfo()).termsVersion;
+    if (rememberedTerms() !== version) {
+      location.assign(`/?url=${encodeURIComponent(scan.host)}`);
+      return;
+    }
+    const next = await api('/api/scans', { method: 'POST', body: JSON.stringify({ url: scan.host, deep: scan.deep, terms: version }) });
     location.assign(`/report/${next.id}`);
   } catch (err) {
     button.disabled = false;

@@ -1,7 +1,17 @@
 import './components.js';
-import { api, h } from './dom.js';
+import { api, h, forgetTerms, rememberTerms, rememberedTerms, scannerInfo } from './dom.js';
 
 const $ = (sel) => document.querySelector(sel);
+
+let termsVersion = null;
+try {
+  termsVersion = (await scannerInfo()).termsVersion;
+  if (rememberedTerms() === termsVersion) $('#terms').checked = true;
+  else if (rememberedTerms()) forgetTerms();
+} catch {
+  /* the server will say so when the upload is sent */
+}
+$('#terms').addEventListener('change', () => $('#consent-box').classList.remove('attention'));
 
 const SEVERITIES = ['critical', 'high', 'medium', 'low'];
 const COLOUR = { critical: 'fail', high: 'fail', medium: 'warn', low: 'info' };
@@ -38,6 +48,11 @@ function fail(message) {
 async function run(files, skippedDirs) {
   $('#error').hidden = true;
   $('#result').hidden = true;
+  if (!$('#terms').checked) {
+    $('#consent-box').classList.add('attention');
+    $('#terms').focus();
+    return fail('Please confirm that you may upload this code and accept the terms first, then drop it again.');
+  }
   if (!files.length) return fail('No files were found. Drop a folder, some files, or a .zip.');
 
   const zip = files.length === 1 && /\.zip$/i.test(files[0].path) ? files[0].file : null;
@@ -46,11 +61,16 @@ async function run(files, skippedDirs) {
     if (zip) {
       if (zip.size > limits.maxZipMb * 1_048_576) return fail(`That zip is ${(zip.size / 1_048_576).toFixed(1)} MB. The limit is ${limits.maxZipMb} MB. Zip only the source folders, without node_modules.`);
       status(`Uploading ${zip.name}...`);
-      result = await api('/api/source/zip', { method: 'POST', body: zip, headers: { 'Content-Type': 'application/zip' } });
+      result = await api('/api/source/zip', {
+        method: 'POST',
+        body: zip,
+        headers: { 'Content-Type': 'application/zip', 'X-Wsec-Terms': termsVersion || '' },
+      });
     } else {
       result = await upload(files, skippedDirs);
       if (!result) return;
     }
+    rememberTerms(termsVersion);
     status('');
     render(result);
   } catch (err) {
@@ -102,7 +122,7 @@ async function upload(files, skippedDirs) {
   }
 
   status(`Uploading ${payload.length} files...`);
-  const result = await api('/api/source', { method: 'POST', body: JSON.stringify({ files: payload }) });
+  const result = await api('/api/source', { method: 'POST', body: JSON.stringify({ files: payload, terms: termsVersion }) });
 
   if (skippedDirs.length) result.notices.unshift(`Skipped folders: ${skippedDirs.join(', ')}. Dependencies and build output are not scanned.`);
   if (large) result.notices.push(`${large} file${large === 1 ? ' was' : 's were'} larger than ${limits.maxFileKb} KB and not read.`);

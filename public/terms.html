@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terms of Service - Wsec</title>
+<meta name="description" content="The terms that apply when you use Wsec: authorization, no warranty, limitation of liability, indemnification and dispute resolution.">
+<link rel="stylesheet" href="/assets/css/wsec.css">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<w-header current="legal"></w-header>
+
+<main class="legal">
+  <h1>Terms of Service</h1>
+  <p class="doc-meta">Version <span class="fill unset" data-legal="termsVersion">[VERSION]</span>. These Terms are read together with the <a href="/acceptable-use">Acceptable Use Policy</a> and the <a href="/privacy">Privacy Policy</a>.</p>
+
+  <div class="summary-box">
+    <b>In short.</b> Wsec is a tool for testing websites and code that you own or have permission to test. You are responsible for having that permission. The reports are information, not a guarantee, and the service is provided as it is. If your use of Wsec causes a claim against us, you cover it. This summary is for convenience and does not replace the terms below.
+  </div>
+
+  <ol class="toc">
+    <li><a href="#agreement">Agreement to These Terms</a></li>
+    <li><a href="#service">The Service</a></li>
+    <li><a href="#authorization">Authorization and Ownership</a></li>
+    <li><a href="#use">Acceptable Use</a></li>
+    <li><a href="#impact">How Scans Behave and Your Responsibility for Their Effects</a></li>
+    <li><a href="#reports">Reports and No Professional Advice</a></li>
+    <li><a href="#warranty">No Warranty ("As Is")</a></li>
+    <li><a href="#liability">Limitation of Liability</a></li>
+    <li><a href="#indemnity">Indemnification</a></li>
+    <li><a href="#data">Data, Source Code and Privacy</a></li>
+    <li><a href="#ip">Intellectual Property</a></li>
+    <li><a href="#termination">Suspension and Termination</a></li>
+    <li><a href="#changes">Changes to the Service and to These Terms</a></li>
+    <li><a href="#law">Governing Law and Dispute Resolution</a></li>
+    <li><a href="#general">General Provisions</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ol>
+
+  <h2 id="agreement">Agreement to These Terms</h2>
+  <div class="c">These Terms of Service (the "Terms") are an agreement between you and <span class="fill unset" data-legal="entity">[OPERATOR NAME]</span> (the "Operator", "we", "us" or "our"), which runs the Wsec web security checker at <span class="fill" data-legal="baseUrl">this website</span> (the "Service"). By ticking the confirmation box before a scan, or by otherwise using the Service, you agree to these Terms, the Acceptable Use Policy and the Privacy Policy, which are part of this agreement. If you do not agree, do not use the Service.</div>
+  <div class="c">You must be at least 18 years old, or the age of legal majority where you live, and able to enter a binding contract. If you use the Service for an organization, you confirm that you have authority to bind that organization to these Terms, and "you" includes the organization.</div>
+  <div class="c">We record the version of the Terms you accepted together with each scan you start. You may be asked to accept again when the Terms change.</div>
+  <div class="c">In these Terms: a <b>"Target"</b> is any website, host name, IP address, server, application or network that you ask Wsec to examine; <b>"Source Code"</b> is any files you upload to the Service for checking; a <b>"Report"</b> is any result, score, finding, explanation or configuration the Service produces; and the <b>"Scanner Addresses"</b> are the IP addresses published on the <a href="/whitelist">Whitelist page</a>.</div>
+
+  <h2 id="service">The Service</h2>
+  <div class="c">Wsec examines the externally visible security settings of a Target (such as TLS certificates, HTTP headers, cookies, DNS records and publicly reachable files) and analyses Source Code you upload for common security mistakes. It produces Reports with suggested fixes. Some checks, called "deep checks", request files that should not be public and run only after you prove control of the Target as described on the <a href="/verify">Verify page</a>.</div>
+  <div class="c">The Service does not require an account. We may add, change, limit or remove features, checks, rules, rate limits and file-size limits at any time. We do not promise that the Service will be available, uninterrupted, timely or free of errors.</div>
+  <div class="c">The Service is provided free of charge unless we tell you otherwise in writing before you use a paid feature. If fees are introduced, they will be shown to you before you are charged.</div>
+
+  <h2 id="authorization">Authorization and Ownership</h2>
+  <div class="c">You may ask Wsec to examine only Targets, and upload only Source Code, that you <b>own</b> or for which you have the <b>express, current, written permission</b> of the owner (and of any other person whose permission the law or a contract requires) to carry out the testing that Wsec performs. Examples of such persons include the owner of the website, the owner of the hosting account, and a hosting, cloud, content-delivery or security-service provider whose terms require advance approval for security testing.</div>
+  <div class="c">Each time you start a scan or upload Source Code, you represent and warrant that:
+    <ul>
+      <li>you own the Target or Source Code, or hold the permission described above, and you can show that permission on request;</li>
+      <li>your use of the Service is lawful where you are, where the Target is, and where the Service is operated, including laws on unauthorized access to computer systems;</li>
+      <li>you have the right to upload the Source Code and to allow us to process it for the purpose of producing your Report, and doing so does not breach a licence, a confidentiality duty, or the rights of any third party;</li>
+      <li>the Source Code does not contain personal data, credentials or secrets belonging to others that you have no right to share; and</li>
+      <li>every statement you make to the Service, including any ownership proof, is true.</li>
+    </ul>
+  </div>
+  <div class="c">Proving control of a Target through the Service (a file or a DNS record) is a technical safeguard. It is not legal authorization, it does not replace permission from others described above, and it does not make us responsible for deciding whether you are entitled to test the Target. We rely on your representations and are not required to verify them.</div>
+  <div class="c">You are solely responsible for obtaining and keeping evidence of authorization, for telling your hosting provider, security team or other relevant parties about the testing where needed, and for complying with any testing policy that applies to the Target.</div>
+  <div class="c">If you are the owner or operator of a Target and you do not want it examined by Wsec, you may ask us to block it by writing to <span class="fill unset" data-legal="email">[CONTACT EMAIL]</span> as described in the <a href="/acceptable-use#abuse">Acceptable Use Policy</a>. We may also decline or block any scan at our discretion.</div>
+
+  <h2 id="use">Acceptable Use</h2>
+  <div class="c">You must follow the <a href="/acceptable-use">Acceptable Use Policy</a>, which forbids, among other things, scanning without authorization, denial-of-service or excessive automated use, scraping or mass scanning, using the Service to prepare an attack, and trying to get around the Service's safeguards. A breach of the Acceptable Use Policy is a breach of these Terms.</div>
+
+  <h2 id="impact">How Scans Behave and Your Responsibility for Their Effects</h2>
+  <div class="c">Wsec sends a small number of read-only requests (mainly GET, HEAD and one OPTIONS request), opens a TLS connection and makes DNS queries. It does not submit forms, log in or try passwords. Requests identify themselves with a Wsec user agent and come from the Scanner Addresses.</div>
+  <div class="c">Even light requests can be logged, can trigger alerts, can be blocked by firewalls or rate limiters, and in rare cases can affect fragile or misconfigured systems. You accept those risks. You are responsible for the effect of a scan on the Target and for any consequences of an alert or block, including costs, downtime and claims by others.</div>
+  <div class="c">We design the Service to be gentle, but we do not guarantee that a scan will not disrupt a Target.</div>
+
+  <h2 id="reports">Reports and No Professional Advice</h2>
+  <div class="c">Reports are <b>informational only</b>. They are produced automatically from a limited set of checks at a single moment. They may contain false positives (reporting a problem that is not one) and false negatives (missing a real problem), and they may become wrong as soon as the Target or the Service changes.</div>
+  <div class="c">A Report is not a security audit, a penetration test, a certification, an attestation of compliance with any law or standard (for example PCI DSS, SOC 2, ISO 27001, HIPAA or GDPR), or legal, security, engineering or other professional advice. A high score or a result with no findings does <b>not</b> mean that a Target or Source Code is secure, free of vulnerabilities, or safe from attack.</div>
+  <div class="c">You are responsible for reviewing every finding, testing any fix or configuration before you use it (the suggested configuration is a starting point and may not suit your setup), and for your own decisions. Do not present a Report to others as proof of security or compliance.</div>
+
+  <h2 id="warranty">No Warranty ("As Is")</h2>
+  <div class="c upper">THE SERVICE, THE REPORTS AND ALL CONTENT ARE PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS, IMPLIED OR STATUTORY. TO THE FULLEST EXTENT PERMITTED BY LAW, WE DISCLAIM ALL WARRANTIES, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, NON-INFRINGEMENT, ACCURACY, COMPLETENESS, RELIABILITY, AND ANY WARRANTY ARISING FROM COURSE OF DEALING OR USAGE OF TRADE.</div>
+  <div class="c upper">WE DO NOT WARRANT THAT THE SERVICE WILL MEET YOUR REQUIREMENTS, THAT IT WILL BE UNINTERRUPTED OR ERROR-FREE, THAT DEFECTS WILL BE CORRECTED, THAT THE REPORTS WILL BE ACCURATE OR COMPLETE, THAT ANY TARGET OR SOURCE CODE IS OR WILL BE SECURE OR "HACK-PROOF", OR THAT USE OF THE SERVICE WILL NOT DISRUPT ANY TARGET.</div>
+  <div class="c">Some places do not allow certain warranties to be excluded. In those places, the exclusions above apply only as far as the law allows.</div>
+
+  <h2 id="liability">Limitation of Liability</h2>
+  <div class="c upper">TO THE FULLEST EXTENT PERMITTED BY LAW, THE OPERATOR AND ITS OWNERS, DIRECTORS, OFFICERS, EMPLOYEES, CONTRACTORS, AFFILIATES, LICENSORS AND HOSTING AND SERVICE PROVIDERS (TOGETHER, THE "WSEC PARTIES") WILL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY OR PUNITIVE DAMAGES, OR FOR ANY LOSS OF PROFITS, REVENUE, BUSINESS, GOODWILL, REPUTATION, DATA OR USE, COST OF SUBSTITUTE SERVICES, OR SECURITY INCIDENT OR BREACH, ARISING OUT OF OR RELATED TO THE SERVICE, THE REPORTS OR THESE TERMS, WHETHER IN CONTRACT, TORT (INCLUDING NEGLIGENCE), STRICT LIABILITY OR OTHERWISE, EVEN IF WE WERE TOLD THEY WERE POSSIBLE.</div>
+  <div class="c upper">THIS INCLUDES ANY LOSS THAT RESULTS FROM YOUR RELIANCE ON A REPORT, FROM A VULNERABILITY OR ATTACK THE SERVICE DID NOT FIND OR DID NOT WARN YOU ABOUT, FROM A FALSE FINDING, FROM A CONFIGURATION YOU APPLIED BASED ON A REPORT, OR FROM THE EFFECT OF A SCAN ON ANY TARGET.</div>
+  <div class="c upper">TO THE FULLEST EXTENT PERMITTED BY LAW, THE TOTAL LIABILITY OF THE WSEC PARTIES FOR ALL CLAIMS ARISING OUT OF OR RELATED TO THE SERVICE OR THESE TERMS WILL NOT EXCEED THE GREATER OF (A) THE AMOUNT YOU PAID US FOR THE SERVICE IN THE TWELVE MONTHS BEFORE THE EVENT THAT GAVE RISE TO THE CLAIM AND (B) ONE HUNDRED US DOLLARS (USD 100).</div>
+  <div class="c">These limits apply even if a remedy fails of its essential purpose, and they are a basic part of the bargain that allows us to offer the Service free of charge. Nothing in these Terms limits liability that cannot be limited by law, such as liability for fraud, for death or personal injury caused by negligence, or for anything else that the law of your place of residence does not allow to be limited. Any claim you have against us must be brought within one year after it arises, to the extent the law allows a shorter period than the usual one.</div>
+
+  <h2 id="indemnity">Indemnification</h2>
+  <div class="c">You will defend, indemnify and hold harmless the Wsec Parties from and against any claim, demand, suit, investigation or proceeding brought by a third party, and all resulting damages, losses, liabilities, fines, penalties, settlements, costs and expenses (including reasonable legal fees and costs of investigation), that arise out of or relate to:
+    <ul>
+      <li>any scan you start or any Source Code you upload, including any claim that you did not have authorization or permission to test the Target or to upload the Source Code;</li>
+      <li>the effect of a scan you start on a Target or on any network or service connected to it, including interruption, data loss, alerts, blocks, costs or lost business;</li>
+      <li>your breach of these Terms, the Acceptable Use Policy or any law;</li>
+      <li>a claim that Source Code you upload, or information you give us, infringes or misappropriates the rights of another person or discloses information you had no right to disclose; or</li>
+      <li>your use of a Report, or any statement you make to others based on a Report.</li>
+    </ul>
+  </div>
+  <div class="c">We will tell you promptly about a claim, although a delay in telling you reduces your duty only to the extent you are harmed by it. You may control the defence with counsel reasonably acceptable to us, but you may not settle a claim in a way that admits fault by, or puts a duty on, any Wsec Party without our written consent. We may take part in the defence with our own counsel at our own cost. If you do not take over the defence promptly, we may defend the claim at your expense.</div>
+  <div class="c">If you are a consumer in a place where this clause is not allowed, it applies only as far as the law permits.</div>
+
+  <h2 id="data">Data, Source Code and Privacy</h2>
+  <div class="c">How we handle data is described in the <a href="/privacy">Privacy Policy</a>, which forms part of these Terms. In brief: scan results are kept for a limited period and then deleted; Source Code is analysed in memory and is not stored; visitor IP addresses are used for rate limiting and are not written to our database.</div>
+  <div class="c">You grant us a limited, non-exclusive, worldwide licence to receive, copy, process and temporarily hold the Source Code and the Target information you give us, only to produce your Report, to operate and protect the Service, and to comply with law. We do not claim ownership of your Source Code or Target.</div>
+  <div class="c">Do not upload personal data, live credentials, or confidential material that you are not allowed to share. If you do, you do so at your own risk and you are responsible for any consequences. A Report link can be opened by anyone who has it, so keep the link private.</div>
+  <div class="c">We may disclose information if required by law, court order or a valid request from an authority, to protect the rights, safety or property of anyone, or to investigate and respond to abuse of the Service, including telling the owner of a Target or its hosting provider that scans were run against it.</div>
+
+  <h2 id="ip">Intellectual Property</h2>
+  <div class="c">The Service, including its software, rules, check descriptions, text, design and name, belongs to the Operator or its licensors and is protected by intellectual property laws. Subject to these Terms, we give you a limited, revocable, non-exclusive, non-transferable right to use the Service for your own lawful security testing. You may use your Reports for your own purposes, including sharing them with people who work on your Target.</div>
+  <div class="c">You may not copy, resell, sublicense, offer the Service as your own, build a competing service from its output, scrape it, or reverse engineer it except as the law allows despite this restriction. If you send us feedback, you give us the right to use it without obligation to you.</div>
+
+  <h2 id="termination">Suspension and Termination</h2>
+  <div class="c">You may stop using the Service at any time. We may suspend or end your access, block an IP address or a Target, remove Reports, or refuse any scan at any time and for any reason, including a suspected breach of these Terms, a complaint from a Target's owner, a legal requirement, or a risk to the Service or to others, with or without notice. We are not liable for doing so.</div>
+  <div class="c">Provisions that by their nature should continue after termination continue, including Authorization and Ownership, Reports and No Professional Advice, No Warranty, Limitation of Liability, Indemnification, Intellectual Property, Governing Law and Dispute Resolution, and General Provisions.</div>
+
+  <h2 id="changes">Changes to the Service and to These Terms</h2>
+  <div class="c">We may change these Terms. The version date at the top of this page shows the current version. When the change is material, we will ask you to accept the new version before your next scan. If you keep using the Service after a change takes effect, you accept the changed Terms. If you do not accept a change, stop using the Service.</div>
+
+  <h2 id="law">Governing Law and Dispute Resolution</h2>
+  <div class="c"><b>Governing law.</b> These Terms and any dispute arising out of or related to them or the Service are governed by <span class="fill unset" data-legal="law">[GOVERNING LAW]</span>, without regard to its conflict-of-laws rules. The United Nations Convention on Contracts for the International Sale of Goods does not apply.</div>
+  <div class="c"><b>Informal resolution first.</b> Before starting any formal proceeding, the party with the dispute must send the other a written notice that describes the dispute, the facts, and the outcome sought. For us, send it to <span class="fill unset" data-legal="email">[CONTACT EMAIL]</span>. The parties will try in good faith to resolve it within thirty (30) days of the notice. Formal proceedings may not start until that period has ended, except to ask a court for urgent relief as described below.</div>
+  <div class="c"><b>Binding arbitration.</b> If the dispute is not resolved within that time, it will be settled finally by binding arbitration under <span class="fill unset" data-legal="arbitration">[ARBITRATION RULES AND SEAT]</span>, by one arbitrator, in English. The arbitrator's award is final and may be enforced in any court that has jurisdiction. The arbitration, and everything said or produced in it, will be kept confidential except as needed to enforce an award or as the law requires. Each party bears its own legal costs, and the arbitrator may not award punitive damages beyond what these Terms allow.</div>
+  <div class="c"><b>Individual claims only.</b> To the fullest extent the law allows, disputes will be brought only in your or our individual capacity, and not as a plaintiff or class member in any class, collective, consolidated or representative action. Each party also waives any right to a jury trial where the law allows that waiver.</div>
+  <div class="c"><b>Exceptions.</b> Either party may go to a court of competent jurisdiction (a) for temporary or permanent injunctive or other urgent relief to protect its intellectual property, confidential information or the security of its systems, (b) to enforce an arbitration award, or (c) to bring an individual claim in a small-claims court that has jurisdiction.</div>
+  <div class="c"><b>Mandatory consumer rights.</b> If you are a consumer, nothing in this section takes away a right you have under the mandatory law of the place where you live, including any right to bring a claim in the courts of that place. If any part of this section is found unenforceable for you, the rest remains in force.</div>
+
+  <h2 id="general">General Provisions</h2>
+  <div class="c"><b>Entire agreement.</b> These Terms, the Acceptable Use Policy and the Privacy Policy are the whole agreement between you and us about the Service and replace earlier understandings about it.</div>
+  <div class="c"><b>Severability and waiver.</b> If a provision is found invalid or unenforceable, it will be limited or removed to the smallest extent needed and the rest will stay in force. A failure to enforce a provision is not a waiver of it.</div>
+  <div class="c"><b>Assignment.</b> You may not assign or transfer your rights or duties under these Terms without our written consent. We may assign ours, including to a successor of the Service.</div>
+  <div class="c"><b>Events beyond our control.</b> We are not liable for a delay or failure caused by events beyond our reasonable control, including outages of internet, hosting or power services, attacks on the Service, and acts of government.</div>
+  <div class="c"><b>Sanctions and export.</b> You may not use the Service if you are barred from receiving it under applicable sanctions or export laws, and you will not use it in breach of those laws.</div>
+  <div class="c"><b>Relationship and third parties.</b> You and we are independent parties. No agency, partnership or employment relationship is created. Except for the Wsec Parties, who may rely on these Terms, no one other than you and us has rights under them.</div>
+  <div class="c"><b>Notices.</b> We may give you notice by posting it on the Service or, if you have given us an email address, by email. You may give us notice at the address in the Contact section.</div>
+  <div class="c"><b>Language and headings.</b> These Terms are written in English, and that version controls. Headings are for convenience only.</div>
+
+  <h2 id="contact">Contact</h2>
+  <div class="c"><span class="fill unset" data-legal="entity">[OPERATOR NAME]</span><br><span class="fill unset" data-legal="address">[REGISTERED ADDRESS]</span><br>Email: <span class="fill unset" data-legal="email">[CONTACT EMAIL]</span></div>
+
+  <p class="legal-links"><a href="/acceptable-use">Acceptable Use Policy</a> | <a href="/privacy">Privacy Policy</a> | <a href="/about">About Wsec</a></p>
+</main>
+
+<w-footer></w-footer>
+<script type="module" src="/assets/js/legal.js"></script>
+</body>
+</html>

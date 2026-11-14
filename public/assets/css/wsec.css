@@ -194,6 +194,38 @@ w-dropzone { display: block; margin: 1rem 0; }
 .where { font: .8rem var(--mono); color: var(--muted); }
 .conf { margin-left: .5rem; color: var(--muted); font: .72rem var(--mono); }
 
+/* Legal pages: sections and clauses are numbered by the stylesheet. */
+
+.legal { counter-reset: sec; max-width: 46rem; }
+.legal h2 { counter-increment: sec; counter-reset: cl; }
+.legal h2::before { content: counter(sec) ". "; }
+.legal .c { position: relative; margin: .6rem 0; padding-left: 3.2rem; counter-increment: cl; }
+.legal .c::before { content: counter(sec) "." counter(cl); position: absolute; left: 0; top: .2rem; color: var(--muted); font: .78rem var(--mono); }
+.legal .c p { margin: 0 0 .5rem; }
+.legal .c ul, .legal .c ol { margin: .3rem 0 .5rem; padding-left: 1.3rem; }
+.legal .c li { margin: .25rem 0; }
+.legal h2 { scroll-margin-top: 1rem; }
+.legal .upper { text-transform: none; font-variant: small-caps; letter-spacing: .01em; }
+.doc-meta { margin: .2rem 0 1rem; color: var(--muted); font: .85rem var(--sans); }
+.summary-box { margin: 1rem 0; padding: .7rem .9rem; background: #fffbe6; border: 1px solid #b6a64d; font-size: .95rem; }
+.toc { margin: 1rem 0 1.5rem; padding: .6rem 1rem .6rem 2rem; background: #faf8f0; border: 1px solid var(--rule); font: .9rem/1.6 var(--sans); }
+.toc li { margin: 0; }
+.legal-links { margin: 1.5rem 0 0; font: .9rem var(--sans); }
+.fill.unset { padding: 0 .25rem; background: #fff3a8; border: 1px dashed var(--warn); font: .88em var(--mono); }
+table.data td, table.data th { font-size: .88rem; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.2rem 0; }
+.box { padding: .8rem 1rem; background: #faf8f0; border: 2px groove #bdb8a6; }
+.box h3 { margin-top: 0; }
+.box p { margin: .4rem 0; }
+.faq details { margin: .3rem 0; background: #fff; border: 1px solid var(--rule); }
+.faq summary { padding: .5rem .7rem; font-weight: 700; cursor: pointer; }
+.faq .answer { padding: .1rem .9rem .8rem; border-top: 1px dotted var(--rule); background: #faf8f0; }
+.actions { margin: .8rem 0; }
+.consent { margin: .8rem 0 .2rem; padding: .6rem .8rem; background: #fff; border: 1px solid var(--rule); }
+.consent.attention { border-color: var(--fail); border-width: 2px; }
+.site-head .brand .tag { margin-left: .3rem; }
+@media (max-width: 600px) { .two { grid-template-columns: 1fr; } .legal .c { padding-left: 2.6rem; } }
+
 /* Page bits */
 
 .lead { font-size: 1.1rem; }

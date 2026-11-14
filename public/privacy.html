@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy - Wsec</title>
+<meta name="description" content="What data Wsec processes when you scan a website or upload source code, what is stored, for how long, and how to ask for deletion.">
+<link rel="stylesheet" href="/assets/css/wsec.css">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<w-header current="legal"></w-header>
+
+<main class="legal">
+  <h1>Privacy Policy</h1>
+  <p class="doc-meta">Version <span class="fill unset" data-legal="termsVersion">[VERSION]</span>. This policy is part of the <a href="/terms">Terms of Service</a>.</p>
+
+  <div class="summary-box">
+    <b>In short.</b> Wsec has no accounts, sets no cookies and has no analytics or advertising. Scan reports are kept for a limited time and then deleted. Your IP address is used in memory for rate limiting and is not saved to the database. Source code you upload is analysed in memory and is not stored.
+  </div>
+
+  <ol class="toc">
+    <li><a href="#who">Who We Are and What This Covers</a></li>
+    <li><a href="#data">Data Handling, Logs and Retention</a></li>
+    <li><a href="#targets">Information About the Websites You Scan</a></li>
+    <li><a href="#source">Uploaded Source Code</a></li>
+    <li><a href="#use">How We Use Data</a></li>
+    <li><a href="#basis">Legal Bases</a></li>
+    <li><a href="#sharing">Who Can See Data</a></li>
+    <li><a href="#cookies">Cookies and Tracking</a></li>
+    <li><a href="#deletion">Retention and Deletion</a></li>
+    <li><a href="#security">Security</a></li>
+    <li><a href="#transfers">Where Data Is Processed</a></li>
+    <li><a href="#rights">Your Rights</a></li>
+    <li><a href="#children">Children</a></li>
+    <li><a href="#changes">Changes and Contact</a></li>
+  </ol>
+
+  <h2 id="who">Who We Are and What This Covers</h2>
+  <div class="c">This Privacy Policy explains how <span class="fill unset" data-legal="entity">[OPERATOR NAME]</span> (the "Operator", "we") handles information when you use the Wsec web security checker (the "Service"). For information that identifies a person, the Operator is the controller (the party that decides how and why it is used). Words defined in the <a href="/terms">Terms of Service</a> have the same meaning here.</div>
+  <div class="c">This policy describes how the Service is built to work. The Service is open about this because it is meant to be checked: the way each kind of data is handled below is how the software behaves.</div>
+
+  <h2 id="data">Data Handling, Logs and Retention</h2>
+  <div class="c">The table lists what the Service processes, why, whether it is stored, and for how long.</div>
+  <div class="c">
+    <table class="data">
+      <thead><tr><th>Data</th><th>Why</th><th>Stored?</th><th>How long</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>Scan record.</b> The address you entered, the host name, the time, the results of the scan (findings, scores, selected header values and short evidence excerpts, the Target's IP address and certificate details), and the version of the Terms you accepted.</td>
+          <td>To run the scan, show you the Report, show the change since the last scan, and keep a record of acceptance.</td>
+          <td>Yes, in the Service's database.</td>
+          <td>Deleted automatically after <span class="fill" data-legal="retentionDays">30</span> days. The deletion job runs hourly.</td>
+        </tr>
+        <tr>
+          <td><b>Your IP address.</b></td>
+          <td>Rate limiting and abuse prevention.</td>
+          <td>Held in the server's memory only, to count requests within a rolling one-hour window. It is not written to the database and is not part of the scan record.</td>
+          <td>Up to one hour, and cleared when the server restarts.</td>
+        </tr>
+        <tr>
+          <td><b>Application log.</b> One line per request with the method, the path (without the query string), the status code and the time taken. It does not contain IP addresses, request bodies, uploaded files or scan results.</td>
+          <td>Running and fixing the Service.</td>
+          <td>Written to the server's log output and kept by the hosting environment.</td>
+          <td>As set by the host: <span class="fill unset" data-legal="logRetention">[LOG RETENTION PERIOD]</span>.</td>
+        </tr>
+        <tr>
+          <td><b>Web server or proxy logs.</b> The host or any reverse proxy in front of the Service may record connection details, including IP addresses, outside the Service's own software.</td>
+          <td>Operating and securing the hosting environment.</td>
+          <td>Held by the hosting provider (<span class="fill unset" data-legal="hosting">[HOSTING PROVIDER AND REGION]</span>) under its own settings.</td>
+          <td>As set by that provider and described above.</td>
+        </tr>
+        <tr>
+          <td><b>Uploaded source code.</b></td>
+          <td>To produce the source code Report.</td>
+          <td>No. It is read from the request, analysed in memory and discarded. It is not written to disk, not logged and not kept in any report.</td>
+          <td>Only for the seconds the check takes.</td>
+        </tr>
+        <tr>
+          <td><b>Ownership proof record.</b> A host name and a random token created for it.</td>
+          <td>To let you prove control of a host for deep checks.</td>
+          <td>Yes, in the Service's database.</td>
+          <td>Until the Service is shut down or you ask us to delete it.</td>
+        </tr>
+        <tr>
+          <td><b>Messages you send us.</b> For example abuse reports, opt-out requests and deletion requests, with your email address.</td>
+          <td>To answer you and to keep a record of requests.</td>
+          <td>Yes, in the Operator's email system.</td>
+          <td>As long as needed to deal with the request and meet legal duties.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="c">The Service does not ask for your name or an account, and it does not record which scans came from which person. A Report is found by its link, which contains a long random identifier. Anyone who has the link can open the Report, so share it with care. Report pages ask search engines not to index them.</div>
+  <div class="c">Backups: if the Operator makes backups of the database, they may hold scan records for a short time after the live copy is deleted. Backups are kept by the Operator only for restoring the Service and are not used for any other purpose.</div>
+
+  <h2 id="targets">Information About the Websites You Scan</h2>
+  <div class="c">To produce a Report the Service reads what a Target sends to any visitor: response headers, certificate details, DNS records, the home page and well-known files. It keeps only the findings and short excerpts needed to explain them. It does not intentionally collect personal data from Targets. Some public information can include personal data, for example an email address in a security contact file, and if so it may appear in a Report and is kept and deleted with that Report.</div>
+  <div class="c">The Target's operator will see requests from the Scanner Addresses with a Wsec user agent in their own logs.</div>
+
+  <h2 id="source">Uploaded Source Code</h2>
+  <div class="c">Files you upload are sent to the Service, analysed by automated pattern checks in the server's memory, and discarded when the response is sent. They are not written to disk, not placed in a log, not included in any stored Report, not read by a person, and not used to train any model. Zip files are opened in memory and are not extracted to disk.</div>
+  <div class="c">The results are returned only to your browser. A finding shows the file name, the line number and the line itself. Where the Service recognises a secret (for example a cloud key or a token), it shows only the first characters of it. Other sensitive text on the same line may appear in the result that is returned to you, and the result is not stored by the Service. Your browser and any device you use may keep it, so close the page when you are done.</div>
+  <div class="c">Do not upload secrets or personal data of other people. If you would prefer that your code does not leave your computer, you can run Wsec yourself; the project's README explains how.</div>
+  <div class="c">The Service is hosted on infrastructure that may handle memory in ways outside our control (for example swap files or crash diagnostics). We have not designed the Service to retain uploaded code, but we cannot promise that no trace could ever exist at the infrastructure level.</div>
+
+  <h2 id="use">How We Use Data</h2>
+  <div class="c">We use data only to: run scans and source checks and show you the results; apply rate limits and prevent abuse and attacks on the Service or on Targets; investigate complaints; keep a record that the Terms were accepted; keep the Service running and fix faults; and meet legal duties and enforce our terms.</div>
+  <div class="c">We do not sell personal data, we do not use it for advertising, and we do not build profiles of visitors.</div>
+
+  <h2 id="basis">Legal Bases</h2>
+  <div class="c">Where the law requires a legal basis for processing personal data (for example the GDPR in the European Union and the United Kingdom), we rely on: performance of the contract with you, to provide the Service you asked for; our legitimate interests in keeping the Service secure and free from abuse, in responding to complaints, and in protecting our legal position (we balance these against your rights and interests); and legal obligation, where we must keep or give information. We do not rely on consent for any processing, because the Service does not use cookies or tracking.</div>
+
+  <h2 id="sharing">Who Can See Data</h2>
+  <div class="c">We share data only in these cases:
+    <ul>
+      <li><b>Providers.</b> The hosting and infrastructure providers that run the Service for us (<span class="fill unset" data-legal="hosting">[HOSTING PROVIDER AND REGION]</span>), who process data on our instructions, and our email provider for messages you send us.</li>
+      <li><b>Target owners and their providers.</b> If someone complains about scans of a host, we may tell its owner or hosting provider that scans were run, when, and from which addresses. We do not need to name you, and we do not record who started a scan.</li>
+      <li><b>Legal and safety.</b> Where required by law, court order or a valid request from an authority, or to protect the rights, property or safety of anyone, including to investigate abuse.</li>
+      <li><b>Business changes.</b> If the Service is sold or transferred, data may pass to the new operator, who must honour this policy.</li>
+      <li><b>Anyone with a Report link.</b> See above.</li>
+    </ul>
+  </div>
+  <div class="c">The Service does not load third-party scripts, fonts, analytics or advertising, so your visit does not send data about you to such services. Links to other sites, such as reference documentation, leave the Service; those sites have their own policies.</div>
+
+  <h2 id="cookies">Cookies and Tracking</h2>
+  <div class="c">The Service does not set cookies and does not use analytics, advertising or fingerprinting. Your browser may remember your confirmation of the Terms in its own local storage on your device, so that you are not asked on every scan. That value stays on your device. You can clear it in your browser settings. The Service ignores "Do Not Track" signals only because it does not track.</div>
+
+  <h2 id="deletion">Retention and Deletion</h2>
+  <div class="c">Scan records are deleted automatically after the retention period shown in the table. You may ask us to delete a Report sooner by writing to <span class="fill unset" data-legal="email">[CONTACT EMAIL]</span> with the Report link. You may also ask us to delete the ownership proof record for a host you control. We will confirm what we deleted. We may keep information that we must keep by law, or that we need to deal with a dispute or abuse, for as long as that purpose lasts.</div>
+  <div class="c">Because the Service does not keep IP addresses or accounts, we cannot find "your" scans without the Report link or host name you give us.</div>
+
+  <h2 id="security">Security</h2>
+  <div class="c">We use measures that fit the Service, including encrypted connections where the Service is served over HTTPS, a strict browser security policy for the pages, limits on what a scan may connect to, and keeping uploaded code out of storage. No system is completely secure. If a breach affects your personal data, we will notify you and the authorities where the law requires.</div>
+
+  <h2 id="transfers">Where Data Is Processed</h2>
+  <div class="c">Data is processed where the Service is hosted: <span class="fill unset" data-legal="hosting">[HOSTING PROVIDER AND REGION]</span>. If you are in a country with different data-protection rules, your data may be moved to and processed in a country whose rules differ from yours. Where the law requires safeguards for such transfers, we use them.</div>
+
+  <h2 id="rights">Your Rights</h2>
+  <div class="c">Depending on where you live, you may have the right to ask us for access to personal data we hold about you, to have it corrected or deleted, to restrict or object to its use, to receive it in a portable form, and to complain to a data-protection authority. To use these rights, write to <span class="fill unset" data-legal="email">[CONTACT EMAIL]</span>. We may need the Report link or other details to find any data, and we may need to confirm your identity first. We answer within the time the law sets, and we do not charge for reasonable requests.</div>
+
+  <h2 id="children">Children</h2>
+  <div class="c">The Service is for adults and is not directed to children under 18. We do not knowingly collect personal data from children. If you think a child has given us data, write to us and we will delete it.</div>
+
+  <h2 id="changes">Changes and Contact</h2>
+  <div class="c">We may update this policy. The version date at the top shows the current version, and we will ask you to accept the Terms again when a change is material.</div>
+  <div class="c"><span class="fill unset" data-legal="entity">[OPERATOR NAME]</span><br><span class="fill unset" data-legal="address">[REGISTERED ADDRESS]</span><br>Email: <span class="fill unset" data-legal="email">[CONTACT EMAIL]</span></div>
+
+  <p class="legal-links"><a href="/terms">Terms of Service</a> | <a href="/acceptable-use">Acceptable Use Policy</a> | <a href="/about">About Wsec</a></p>
+</main>
+
+<w-footer></w-footer>
+<script type="module" src="/assets/js/legal.js"></script>
+</body>
+</html>
