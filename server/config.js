@@ -40,6 +40,8 @@ export const config = {
 
   scansPerHour: num(env.WSEC_SCANS_PER_HOUR, 12),
   scansPerHostPerHour: num(env.WSEC_SCANS_PER_HOST_PER_HOUR, 6),
+  // Hosts that publish a wsec-allow record get this higher per-host limit.
+  scansPerHostAllowedPerHour: num(env.WSEC_SCANS_PER_HOST_ALLOWED_PER_HOUR, 30),
   verifyChecksPerHour: num(env.WSEC_VERIFY_PER_HOUR, 30),
   maxConcurrentScans: num(env.WSEC_MAX_CONCURRENT, 4),
   maxQueuedScans: 50,

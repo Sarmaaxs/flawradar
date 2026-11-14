@@ -61,7 +61,8 @@ function renderResult(s) {
   document.title = `${s.host} - Wsec report`;
   const when = formatDate(s.createdAt);
   const seconds = (r.durationMs / 1000).toFixed(1);
-  $('#meta').textContent = `Scanned ${when}, ${seconds} seconds. Final address ${r.finalUrl}${r.ip ? ` (${r.ip})` : ''}.${s.deep ? ' Deep scan.' : ''}`;
+  const allowBit = r.allow ? ' Host has a Wsec allow record.' : '';
+  $('#meta').textContent = `Scanned ${when}, ${seconds} seconds. Final address ${r.finalUrl}${r.ip ? ` (${r.ip})` : ''}.${s.deep ? ' Deep scan.' : ''}${allowBit}`;
   $('#progress').hidden = true;
   $('#problem').hidden = true;
 
@@ -97,6 +98,8 @@ function renderResult(s) {
   const deepSkipped = r.findings.some((f) => f.status === 'skip' && checks[f.id]?.deep);
   $('#deep-note').hidden = !deepSkipped;
   $('#deep-link').setAttribute('href', `/verify?host=${encodeURIComponent(s.host)}`);
+  const allowNote = $('#allow-note');
+  if (allowNote) allowNote.hidden = !r.allow;
 
   const groups = new Map();
   for (const f of r.findings) {

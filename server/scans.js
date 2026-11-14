@@ -11,13 +11,13 @@ export function queueLength() {
   return queue.length;
 }
 
-export function startScan(target, { deep = false, termsVersion = null } = {}) {
+export function startScan(target, { deep = false, termsVersion = null, allow = null } = {}) {
   if (queue.length >= config.maxQueuedScans) {
     throw new AppError(503, 'busy', 'Wsec is busy. Try again in a minute.');
   }
   const id = crypto.randomBytes(12).toString('hex');
   db.insertScan({ id, host: target.host, url: target.input, deep, createdAt: Date.now(), termsVersion });
-  queue.push({ id, target, deep });
+  queue.push({ id, target, deep, allow });
   pump();
   return id;
 }
@@ -33,7 +33,7 @@ function pump() {
   }
 }
 
-async function execute({ id, target, deep }) {
+async function execute({ id, target, deep, allow }) {
   const steps = [];
   const onStep = (name, state) => {
     const existing = steps.find((s) => s.name === name);
@@ -53,6 +53,7 @@ async function execute({ id, target, deep }) {
 
   try {
     const result = await Promise.race([runScan(target, { deep, onStep }), timeout]);
+    if (allow) result.allow = allow;
     db.finishScan(id, {
       status: result.blocked ? 'blocked' : 'done',
       score: result.score,

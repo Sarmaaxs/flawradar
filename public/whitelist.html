@@ -31,9 +31,26 @@
     <li>Normal scan: about eight requests. The home page over HTTPS, one request to port 80, one CORS test, one or two requests for <code>security.txt</code>, a TLS handshake, and some DNS lookups.</li>
     <li>Deep scan: about twenty more requests for well-known paths, spaced a fraction of a second apart. Deep scans only run against hosts whose owner has <a href="/verify">proved control</a>.</li>
     <li>Only <code>GET</code>, <code>HEAD</code> and one <code>OPTIONS</code> request. Nothing is submitted, no forms are filled in, nothing is guessed at, no passwords are tried.</li>
-    <li>No more than six scans of one host per hour, and twelve per hour from one visitor.</li>
+    <li>No more than six scans of one host per hour by default, and twelve per hour from one visitor. Hosts with an allow record (below) get a higher per-host limit.</li>
     <li>Responses are checked and discarded. The report keeps the findings, a few header values and short excerpts used as evidence.</li>
   </ul>
+
+  <h2>Allow more scans of your own site</h2>
+  <p>If you own the site and want Wsec to treat it as opted-in (higher per-host rate limit, less “noise” friction), publish one of the following. Removing it restores the normal limit immediately.</p>
+  <ol>
+    <li>
+      <strong>DNS TXT</strong> (preferred) at <code>_wsec.<em>your-domain</em></code>:
+      <pre class="evidence">wsec-allow=1</pre>
+      Optional contact for abuse reports:
+      <pre class="evidence">wsec-allow=1; contact=security@example.com</pre>
+      This can sit next to a <code>wsec-verify=…</code> record used for deep scans — DNS allows multiple TXT values on the same name.
+    </li>
+    <li>
+      <strong>File</strong> at <code>/.well-known/wsec-allow.txt</code> on the site, with the same content:
+      <pre class="evidence">wsec-allow=1</pre>
+    </li>
+  </ol>
+  <p>After the record is live, the next scan of that host uses the higher limit and the report notes that the host has opted in.</p>
 
   <p id="contact" class="notice" hidden></p>
 </main>

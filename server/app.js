@@ -10,6 +10,7 @@ import { listChecks } from './scanner/checks.js';
 import { buildFixConfig } from './scanner/fixes.js';
 import { startScan } from './scans.js';
 import { checkOwnership, instructions } from './verify.js';
+import { checkAllow, allowInstructions } from './allow.js';
 import { analyzeFiles, ruleCatalog } from './source/analyze.js';
 import { readZip } from './source/zip.js';
 
@@ -242,9 +243,11 @@ const api = {
       limits: {
         scansPerHour: config.scansPerHour,
         scansPerHostPerHour: config.scansPerHostPerHour,
+        scansPerHostAllowedPerHour: config.scansPerHostAllowedPerHour,
         sourcePerHour: config.sourcePerHour,
         retentionDays: config.retentionDays,
       },
+      allow: allowInstructions('example.com'),
     });
   },
 
@@ -268,11 +271,26 @@ const api = {
     const target = parseTarget(body.url);
     await resolvePublic(target.host);
 
+    // Optional owner signal: higher per-host rate limit, shown on the report.
+    let allow = null;
+    try {
+      const a = await checkAllow(target);
+      if (a.allowed) allow = { method: a.method, contact: a.contact || null };
+    } catch {
+      /* allow check is best-effort; a DNS failure must not block the scan */
+    }
+
+    const hostLimit = allow ? config.scansPerHostAllowedPerHour : config.scansPerHostPerHour;
     const hostScans = db.countHostScansSince(target.host, Date.now() - 3_600_000);
-    if (hostScans >= config.scansPerHostPerHour) {
-      throw new AppError(429, 'host_rate_limited', `${target.host} was scanned ${hostScans} times in the last hour. Try again later.`, {
-        retryAfter: 600,
-      });
+    if (hostScans >= hostLimit) {
+      throw new AppError(
+        429,
+        'host_rate_limited',
+        allow
+          ? `${target.host} was scanned ${hostScans} times in the last hour (allow-listed limit is ${hostLimit}). Try again later.`
+          : `${target.host} was scanned ${hostScans} times in the last hour. Try again later.`,
+        { retryAfter: 600 },
+      );
     }
 
     const deep = body.deep === true;
@@ -285,8 +303,8 @@ const api = {
         });
       }
     }
-    const id = startScan(target, { deep, termsVersion: body.terms });
-    sendJson(res, 202, { id, status: 'queued' }, { Location: `/report/${id}` });
+    const id = startScan(target, { deep, termsVersion: body.terms, allow });
+    sendJson(res, 202, { id, status: 'queued', allow: allow || undefined }, { Location: `/report/${id}` });
   },
 
   getScan(req, res, [id]) {
