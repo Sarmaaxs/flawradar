@@ -35,8 +35,15 @@ body {
   font: 16px/1.55 var(--serif);
 }
 
-a { color: var(--link); }
-a:visited { color: var(--visited); }
+a, a:visited { color: var(--link); }
+html { -webkit-tap-highlight-color: transparent; }
+
+/* Menu, footer and button-style links stay black. They do not turn blue or purple once visited. */
+.site-head nav a, .site-head nav a:visited,
+.site-head .brand a, .site-head .brand a:visited,
+.site-foot a, .site-foot a:visited,
+a.button, a.button:visited { color: var(--ink); }
+.site-head nav a:hover, .site-foot a:hover { background: var(--ink); color: var(--paper); text-decoration: none; }
 a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible, select:focus-visible {
   outline: 2px dotted #000;
   outline-offset: 2px;
