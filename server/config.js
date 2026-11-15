@@ -11,6 +11,8 @@ try {
 }
 
 const env = process.env;
+// Prefer FLAWRADAR_*; fall back to legacy WSEC_* so old deploys keep working.
+const envGet = (key) => env[`FLAWRADAR_${key}`] ?? env[`WSEC_${key}`];
 const list = (v) => (v || '').split(',').map((s) => s.trim()).filter(Boolean);
 const num = (v, fallback) => {
   const n = Number(v);
@@ -24,31 +26,31 @@ export const config = {
   root,
   port,
   host: env.HOST || '127.0.0.1',
-  baseUrl: (env.WSEC_BASE_URL || `http://localhost:${port}`).replace(/\/+$/, ''),
-  dataDir: env.WSEC_DATA_DIR || path.join(root, 'data'),
-  contact: env.WSEC_CONTACT || '',
-  quiet: env.WSEC_QUIET === '1',
+  baseUrl: (envGet('BASE_URL') || `http://localhost:${port}`).replace(/\/+$/, ''),
+  dataDir: envGet('DATA_DIR') || path.join(root, 'data'),
+  contact: envGet('CONTACT') || '',
+  quiet: envGet('QUIET') === '1',
 
   // Addresses the scanner connects from. Shown on the Whitelist page.
-  publicIps: list(env.WSEC_PUBLIC_IPS),
+  publicIps: list(envGet('PUBLIC_IPS')),
   // Bind outgoing scan connections to this local address.
-  egressIp: env.WSEC_EGRESS_IP || '',
+  egressIp: envGet('EGRESS_IP') || '',
   // Read the client address from X-Forwarded-For (only behind a proxy you control).
-  trustProxy: env.WSEC_TRUST_PROXY === '1',
+  trustProxy: envGet('TRUST_PROXY') === '1',
   // Development only: allow scanning private addresses and custom ports.
-  allowPrivate: env.WSEC_ALLOW_PRIVATE === '1',
+  allowPrivate: envGet('ALLOW_PRIVATE') === '1',
 
-  scansPerHour: num(env.WSEC_SCANS_PER_HOUR, 12),
-  scansPerHostPerHour: num(env.WSEC_SCANS_PER_HOST_PER_HOUR, 6),
-  // Hosts that publish a wsec-allow record get this higher per-host limit.
-  scansPerHostAllowedPerHour: num(env.WSEC_SCANS_PER_HOST_ALLOWED_PER_HOUR, 30),
-  verifyChecksPerHour: num(env.WSEC_VERIFY_PER_HOUR, 30),
-  maxConcurrentScans: num(env.WSEC_MAX_CONCURRENT, 4),
+  scansPerHour: num(envGet('SCANS_PER_HOUR'), 12),
+  scansPerHostPerHour: num(envGet('SCANS_PER_HOST_PER_HOUR'), 6),
+  // Hosts that publish a flawradar-allow record get this higher per-host limit.
+  scansPerHostAllowedPerHour: num(envGet('SCANS_PER_HOST_ALLOWED_PER_HOUR'), 30),
+  verifyChecksPerHour: num(envGet('VERIFY_PER_HOUR'), 30),
+  maxConcurrentScans: num(envGet('MAX_CONCURRENT'), 4),
   maxQueuedScans: 50,
-  retentionDays: num(env.WSEC_RETENTION_DAYS, 30),
+  retentionDays: num(envGet('RETENTION_DAYS'), 30),
 
   // Source upload scanning. Code is analysed in memory and never stored.
-  sourcePerHour: num(env.WSEC_SOURCE_PER_HOUR, 20),
+  sourcePerHour: num(envGet('SOURCE_PER_HOUR'), 20),
   maxSourceFiles: 3000,
   maxFileBytes: 512 * 1024,
   maxSourceTotalBytes: 30 * 1024 * 1024,
@@ -61,7 +63,7 @@ export const config = {
 
   // Hosts whose owners asked not to be scanned (see the Acceptable Use Policy). A listed
   // name also covers its subdomains. Comma separated, applied after a restart.
-  blockedHosts: list(env.WSEC_BLOCKED_HOSTS).map((h) => h.toLowerCase().replace(/^\.+|\.+$/g, '')),
+  blockedHosts: list(envGet('BLOCKED_HOSTS')).map((h) => h.toLowerCase().replace(/^\.+|\.+$/g, '')),
 
   // The version of the Terms, Acceptable Use Policy and Privacy Policy that people accept
   // before a scan. Change it whenever you change those pages in a way that matters; everyone
@@ -71,16 +73,16 @@ export const config = {
   // Filled into the legal pages. Anything left empty shows as a highlighted
   // placeholder on the page, so you can see what still needs completing.
   legal: {
-    entity: env.WSEC_LEGAL_ENTITY || '',
-    address: env.WSEC_LEGAL_ADDRESS || '',
-    email: env.WSEC_LEGAL_EMAIL || '',
-    law: env.WSEC_LEGAL_LAW || '',
-    arbitration: env.WSEC_LEGAL_ARBITRATION || '',
-    hosting: env.WSEC_LEGAL_HOSTING || '',
-    logRetention: env.WSEC_LEGAL_LOG_RETENTION || '',
+    entity: envGet('LEGAL_ENTITY') || '',
+    address: envGet('LEGAL_ADDRESS') || '',
+    email: envGet('LEGAL_EMAIL') || '',
+    law: envGet('LEGAL_LAW') || '',
+    arbitration: envGet('LEGAL_ARBITRATION') || '',
+    hosting: envGet('LEGAL_HOSTING') || '',
+    logRetention: envGet('LEGAL_LOG_RETENTION') || '',
   },
 };
 
 export function userAgent() {
-  return `Wsec-Scanner/${config.version} (+${config.baseUrl}/whitelist)`;
+  return `FlawRadar-Scanner/${config.version} (+${config.baseUrl}/whitelist)`;
 }
