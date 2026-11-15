@@ -13,7 +13,7 @@ export function queueLength() {
 
 export function startScan(target, { deep = false, termsVersion = null, allow = null } = {}) {
   if (queue.length >= config.maxQueuedScans) {
-    throw new AppError(503, 'busy', 'Wsec is busy. Try again in a minute.');
+    throw new AppError(503, 'busy', 'FlawRadar is busy. Try again in a minute.');
   }
   const id = crypto.randomBytes(12).toString('hex');
   db.insertScan({ id, host: target.host, url: target.input, deep, createdAt: Date.now(), termsVersion });

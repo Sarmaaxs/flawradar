@@ -1,12 +1,12 @@
 const HEADERS = {
   nginx: (host) =>
-    `# Settings suggested by Wsec for ${host}\n` +
+    `# Settings suggested by FlawRadar for ${host}\n` +
     '# Put these inside the server { } block that serves the site, then run: nginx -t && nginx -s reload\n' +
     '# Note: nginx drops server-level add_header lines inside any location that has its own add_header.',
   apache: (host) =>
-    `# Settings suggested by Wsec for ${host}\n` +
+    `# Settings suggested by FlawRadar for ${host}\n` +
     '# Needs mod_headers (a2enmod headers). Put these in the VirtualHost for the site, then reload Apache.',
-  express: (host) => `// Settings suggested by Wsec for ${host}\n// Register this before your routes.`,
+  express: (host) => `// Settings suggested by FlawRadar for ${host}\n// Register this before your routes.`,
 };
 
 /**

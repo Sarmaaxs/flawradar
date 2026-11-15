@@ -6,8 +6,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
-process.env.WSEC_ALLOW_PRIVATE = '1';
-process.env.WSEC_DB = ':memory:';
+process.env.FLAWRADAR_ALLOW_PRIVATE = '1';
+process.env.FLAWRADAR_DB = ':memory:';
 
 const { parseTarget } = await import('../server/scanner/net.js');
 const { runScan } = await import('../server/scanner/scan.js');
@@ -25,7 +25,7 @@ let dir;
 
 before(async () => {
   if (!hasOpenssl) return;
-  dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wsec-tls-'));
+  dir = fs.mkdtempSync(path.join(os.tmpdir(), 'flawradar-tls-'));
   execFileSync(
     'openssl',
     ['req', '-x509', '-newkey', 'ec', '-pkeyopt', 'ec_paramgen_curve:prime256v1', '-nodes', '-days', '30',

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makeZip } from './helpers/zipwriter.js';
 
-process.env.WSEC_DB = ':memory:';
+process.env.FLAWRADAR_DB = ':memory:';
 const { analyzeFiles, redactSecrets, ruleCatalog } = await import('../server/source/analyze.js');
 const { readZip } = await import('../server/source/zip.js');
 const { normalizePath, skipReason } = await import('../server/source/paths.js');

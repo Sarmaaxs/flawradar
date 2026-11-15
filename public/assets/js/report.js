@@ -58,11 +58,12 @@ function findingNode(f) {
 function renderResult(s) {
   const r = s.result;
   $('#title').textContent = `Report for ${s.host}`;
-  document.title = `${s.host} - Wsec report`;
+  document.title = `${s.host} - FlawRadar report`;
   const when = formatDate(s.createdAt);
   const seconds = (r.durationMs / 1000).toFixed(1);
-  const allowBit = r.allow ? ' Host has a Wsec allow record.' : '';
-  $('#meta').textContent = `Scanned ${when}, ${seconds} seconds. Final address ${r.finalUrl}${r.ip ? ` (${r.ip})` : ''}.${s.deep ? ' Deep scan.' : ''}${allowBit}`;
+  const allowBit = r.allow ? ' Host has a FlawRadar allow record.' : '';
+  const pagesBit = r.pagesChecked > 1 ? ` ${r.pagesChecked} pages checked.` : '';
+  $('#meta').textContent = `Scanned ${when}, ${seconds} seconds. Final address ${r.finalUrl}${r.ip ? ` (${r.ip})` : ''}.${s.deep ? ' Deep scan.' : ''}${pagesBit}${allowBit}`;
   $('#progress').hidden = true;
   $('#problem').hidden = true;
 
@@ -72,7 +73,7 @@ function renderResult(s) {
       `Report for ${s.host}`,
       h('b', {}, 'The scan was blocked. '),
       `The site answered with HTTP ${r.blocked.status} instead of its home page.${who} Grading that response would describe the firewall, not your site, so no score was given. `,
-      h('a', { href: '/whitelist' }, 'Add the Wsec addresses to your allow list'),
+      h('a', { href: '/whitelist' }, 'Add the FlawRadar addresses to your allow list'),
       ' and scan again.',
     );
     return;

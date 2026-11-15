@@ -57,13 +57,13 @@ $('#check').addEventListener('click', async (event) => {
           'p',
           { class: 'alert note' },
           h('b', {}, 'Verified. '),
-          `Wsec found the proof for ${r.host} (${r.method === 'file' ? 'file' : 'DNS record'}). `,
+          `FlawRadar found the proof for ${r.host} (${r.method === 'file' ? 'file' : 'DNS record'}). `,
           h('a', { href: `/?url=${encodeURIComponent(r.host)}` }, 'Run a deep scan.'),
         ),
       );
     } else {
       out.replaceChildren(
-        h('p', { class: 'alert' }, h('b', {}, 'Not found yet. '), 'Here is what Wsec tried:'),
+        h('p', { class: 'alert' }, h('b', {}, 'Not found yet. '), 'Here is what FlawRadar tried:'),
         h(
           'table',
           {},

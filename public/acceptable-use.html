@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Acceptable Use Policy - Wsec</title>
-<meta name="description" content="What you may and may not do with Wsec: authorization, prohibited use, rate limits, abuse reports and how site owners can opt out.">
-<link rel="stylesheet" href="/assets/css/wsec.css">
+<title>Acceptable Use Policy - FlawRadar</title>
+<meta name="description" content="What you may and may not do with FlawRadar: authorization, prohibited use, rate limits, abuse reports and how site owners can opt out.">
+<link rel="stylesheet" href="/assets/css/flawradar.css">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 </head>
 <body>
@@ -16,7 +16,7 @@
   <p class="doc-meta">Version <span class="fill unset" data-legal="termsVersion">[VERSION]</span>. This policy is part of the <a href="/terms">Terms of Service</a>.</p>
 
   <div class="summary-box">
-    <b>In short.</b> Test only what is yours, or what you have written permission to test. Do not use Wsec to attack, overload, spy on or harvest data about anyone, and do not try to get around its safeguards.
+    <b>In short.</b> Test only what is yours, or what you have written permission to test. Do not use FlawRadar to attack, overload, spy on or harvest data about anyone, and do not try to get around its safeguards.
   </div>
 
   <ol class="toc">
@@ -28,17 +28,17 @@
     <li><a href="#source">Source Code Uploads</a></li>
     <li><a href="#findings">Handling What You Find</a></li>
     <li><a href="#abuse">Reporting Abuse and Opting a Site Out</a></li>
-    <li><a href="#research">Reporting a Problem in Wsec Itself</a></li>
+    <li><a href="#research">Reporting a Problem in FlawRadar Itself</a></li>
     <li><a href="#enforcement">Enforcement</a></li>
     <li><a href="#contact">Changes and Contact</a></li>
   </ol>
 
   <h2 id="purpose">Purpose and Scope</h2>
-  <div class="c">Wsec exists to help people check the security of their own websites and code. This Acceptable Use Policy (the "Policy") says how the Service may be used. It applies to everyone who uses the Service, including through scripts or the API. Words defined in the <a href="/terms">Terms of Service</a> have the same meaning here.</div>
+  <div class="c">FlawRadar exists to help people check the security of their own websites and code. This Acceptable Use Policy (the "Policy") says how the Service may be used. It applies to everyone who uses the Service, including through scripts or the API. Words defined in the <a href="/terms">Terms of Service</a> have the same meaning here.</div>
   <div class="c">Security tools can be used for good and for harm. We take misuse seriously, and we may act on it as described in this Policy.</div>
 
   <h2 id="authorization">Authorization Is Required</h2>
-  <div class="c">You may scan only a Target that you own, or for which the owner has given you <b>express written permission</b> to run the kind of tests Wsec runs. Permission must come from a person who has the right to give it, and it must still be in force when you scan.</div>
+  <div class="c">You may scan only a Target that you own, or for which the owner has given you <b>express written permission</b> to run the kind of tests FlawRadar runs. Permission must come from a person who has the right to give it, and it must still be in force when you scan.</div>
   <div class="c">Where a Target runs on infrastructure owned by someone else (shared hosting, a cloud platform, a content-delivery network, a managed firewall), check whether that provider's terms require notice or approval for security testing, and obtain it where they do.</div>
   <div class="c">Keep your evidence of permission (for example an email, a signed statement of work, or a written approval from the site owner) for as long as the law or your contract requires, and be ready to show it if we or the Target's owner ask.</div>
   <div class="c">Examples of acceptable use: scanning your own company website; scanning a client's site under a written agreement that covers testing; scanning a staging site you run; checking the source code of your own project.</div>
@@ -65,7 +65,7 @@
       <li>Scan address ranges, lists of host names, or Targets chosen by a pattern rather than because you are entitled to test them.</li>
     </ul>
   </div>
-  <div class="c"><b>Attacks on Wsec and its safeguards.</b>
+  <div class="c"><b>Attacks on FlawRadar and its safeguards.</b>
     <ul>
       <li>Try to make the Service connect to private, internal or reserved addresses, to the Service's own infrastructure, or to cloud metadata services, or try to defeat the checks that prevent that, including by DNS tricks and redirects.</li>
       <li>Defeat, probe beyond what the <a href="#research">section on reporting problems</a> allows, or bypass any rate limit, ownership verification, terms confirmation, access control or other safeguard.</li>
@@ -103,11 +103,11 @@
   <div class="c">If a scan shows you a weakness in a system that someone else owns, or exposes data that belongs to others, stop, do not copy or use the data, and tell the owner. Do not publish details of a weakness in a system you do not own, or use it for gain, before the owner has had reasonable time to fix it. This section does not make a scan of a Target you were not authorized to test acceptable.</div>
 
   <h2 id="abuse">Reporting Abuse and Opting a Site Out</h2>
-  <div class="c">If you think Wsec has been used against a system you own or run without permission, or you see a breach of this Policy, write to <span class="fill unset" data-legal="email">[CONTACT EMAIL]</span> with the host name, the approximate time (in UTC), and the address that Wsec's requests came from if you have it. Wsec's requests carry a "Wsec-Scanner" user agent and come from the addresses on the <a href="/whitelist">Whitelist page</a>.</div>
-  <div class="c"><b>Opt-out for site owners.</b> If you control a host and do not want Wsec to scan it, ask us to block it. Tell us the host name and give us a way to confirm that you control it, such as placing a short text we send you at a path on the host or in a DNS record. We will block the host from further scans as soon as we reasonably can. Blocking a host does not affect any legal right you have.</div>
+  <div class="c">If you think FlawRadar has been used against a system you own or run without permission, or you see a breach of this Policy, write to <span class="fill unset" data-legal="email">[CONTACT EMAIL]</span> with the host name, the approximate time (in UTC), and the address that FlawRadar's requests came from if you have it. FlawRadar's requests carry a "FlawRadar-Scanner" user agent and come from the addresses on the <a href="/whitelist">Whitelist page</a>.</div>
+  <div class="c"><b>Opt-out for site owners.</b> If you control a host and do not want FlawRadar to scan it, ask us to block it. Tell us the host name and give us a way to confirm that you control it, such as placing a short text we send you at a path on the host or in a DNS record. We will block the host from further scans as soon as we reasonably can. Blocking a host does not affect any legal right you have.</div>
   <div class="c">We will look at reports in good faith and without charge. We may share information about the scans of a host with its owner or hosting provider, and with authorities where the law requires or allows it.</div>
 
-  <h2 id="research">Reporting a Problem in Wsec Itself</h2>
+  <h2 id="research">Reporting a Problem in FlawRadar Itself</h2>
   <div class="c">If you find a security problem in the Service, please tell us privately at <span class="fill unset" data-legal="email">[CONTACT EMAIL]</span> before telling anyone else. Give us reasonable time to fix it. While you research, do not access, change or destroy data that is not yours, do not disrupt the Service for other people, do not run automated high-volume tests, and do not use a problem for any purpose other than reporting it. We will not take legal action against research that stays within this section and is carried out in good faith, but we cannot speak for others and we cannot promise protection where the law does not allow us to give it.</div>
 
   <h2 id="enforcement">Enforcement</h2>
@@ -118,7 +118,7 @@
   <div class="c">We may update this Policy. The version date at the top shows the current version, and the Terms of Service describe how changes take effect.</div>
   <div class="c"><span class="fill unset" data-legal="entity">[OPERATOR NAME]</span><br>Email: <span class="fill unset" data-legal="email">[CONTACT EMAIL]</span></div>
 
-  <p class="legal-links"><a href="/terms">Terms of Service</a> | <a href="/privacy">Privacy Policy</a> | <a href="/about">About Wsec</a></p>
+  <p class="legal-links"><a href="/terms">Terms of Service</a> | <a href="/privacy">Privacy Policy</a> | <a href="/about">About FlawRadar</a></p>
 </main>
 
 <w-footer></w-footer>

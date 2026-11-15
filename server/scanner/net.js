@@ -95,7 +95,7 @@ export function parseTarget(input) {
     if (!valid) throw new AppError(400, 'invalid_url', 'That is not a valid host name.');
     if (!config.allowPrivate) {
       if (labels.length < 2 || INTERNAL_SUFFIX.test(host)) {
-        throw new AppError(403, 'blocked_target', 'Wsec only scans public host names.');
+        throw new AppError(403, 'blocked_target', 'FlawRadar only scans public host names.');
       }
     }
   }
@@ -122,7 +122,7 @@ export async function resolvePublic(hostname) {
   const bare = hostname.replace(/^\[|\]$/g, '');
   if (net.isIP(bare)) {
     if (!config.allowPrivate && !isPublicIp(bare)) {
-      throw new AppError(403, 'blocked_target', 'Wsec only scans public addresses.');
+      throw new AppError(403, 'blocked_target', 'FlawRadar only scans public addresses.');
     }
     return [{ address: bare, family: net.isIP(bare) }];
   }
@@ -141,7 +141,7 @@ export async function resolvePublic(hostname) {
         throw new AppError(
           403,
           'blocked_target',
-          `${bare} points at a private or reserved address. Wsec only scans public hosts.`,
+          `${bare} points at a private or reserved address. FlawRadar only scans public hosts.`,
         );
       }
     }

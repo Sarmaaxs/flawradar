@@ -3,7 +3,7 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { config } from './config.js';
 
-const file = process.env.WSEC_DB || path.join(config.dataDir, 'wsec.db');
+const file = process.env.FLAWRADAR_DB || path.join(config.dataDir, 'flawradar.db');
 if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true });
 
 const db = new DatabaseSync(file);

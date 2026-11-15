@@ -2,9 +2,9 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeZip } from './helpers/zipwriter.js';
 
-process.env.WSEC_DB = ':memory:';
-process.env.WSEC_QUIET = '1';
-process.env.WSEC_SOURCE_PER_HOUR = '12';
+process.env.FLAWRADAR_DB = ':memory:';
+process.env.FLAWRADAR_QUIET = '1';
+process.env.FLAWRADAR_SOURCE_PER_HOUR = '12';
 
 const { createServer } = await import('../server/app.js');
 const db = await import('../server/db.js');
@@ -34,7 +34,7 @@ const postJson = async (path, body) => {
 const postZip = async (buffer, type = 'application/zip') => {
   const res = await fetch(base + '/api/source/zip', {
     method: 'POST',
-    headers: { 'Content-Type': type, 'X-Wsec-Terms': TERMS },
+    headers: { 'Content-Type': type, 'X-FlawRadar-Terms': TERMS },
     body: buffer,
   });
   return { status: res.status, body: await res.json() };
@@ -93,7 +93,7 @@ test('oversized uploads are rejected before they are read', async () => {
   const big = Buffer.alloc(11 * 1024 * 1024, 1);
   const res = await fetch(base + '/api/source/zip', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/zip', 'X-Wsec-Terms': TERMS },
+    headers: { 'Content-Type': 'application/zip', 'X-FlawRadar-Terms': TERMS },
     body: big,
   }).catch((e) => e);
   // The server may close the connection once it has refused; either outcome is a refusal.

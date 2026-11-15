@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-delete process.env.WSEC_ALLOW_PRIVATE;
+delete process.env.FLAWRADAR_ALLOW_PRIVATE;
 const { isPublicIp, parseTarget, resolvePublic } = await import('../server/scanner/net.js');
 
 test('isPublicIp accepts public addresses', () => {

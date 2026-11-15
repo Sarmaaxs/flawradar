@@ -3,19 +3,19 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 
 // Fixture servers live on 127.0.0.1, so development mode must be on.
-process.env.WSEC_ALLOW_PRIVATE = '1';
-process.env.WSEC_DB = ':memory:';
-process.env.WSEC_QUIET = '1';
-process.env.WSEC_SCANS_PER_HOUR = '500';
-process.env.WSEC_SCANS_PER_HOST_PER_HOUR = '500';
-process.env.WSEC_PUBLIC_IPS = '203.0.113.10,2001:db8::10';
+process.env.FLAWRADAR_ALLOW_PRIVATE = '1';
+process.env.FLAWRADAR_DB = ':memory:';
+process.env.FLAWRADAR_QUIET = '1';
+process.env.FLAWRADAR_SCANS_PER_HOUR = '500';
+process.env.FLAWRADAR_SCANS_PER_HOST_PER_HOUR = '500';
+process.env.FLAWRADAR_PUBLIC_IPS = '203.0.113.10,2001:db8::10';
 
 const { createServer } = await import('../server/app.js');
 const { parseTarget } = await import('../server/scanner/net.js');
 const db = await import('../server/db.js');
 
-let wsec;
-let wsecUrl;
+let flawradar;
+let flawradarUrl;
 let weak;
 let weakPort;
 let proofValue = null;
@@ -36,7 +36,7 @@ before(async () => {
       res.writeHead(200, { Allow: 'GET, POST, TRACE, OPTIONS' });
       return res.end();
     }
-    if (url === '/.well-known/wsec-verify.txt') {
+    if (url === '/.well-known/flawradar-verify.txt') {
       if (!proofValue) {
         res.writeHead(404);
         return res.end('nope');
@@ -91,20 +91,20 @@ before(async () => {
   downPort = await listen(probe);
   await new Promise((r) => probe.close(r));
 
-  wsec = createServer();
-  const port = await listen(wsec);
-  wsecUrl = `http://127.0.0.1:${port}`;
+  flawradar = createServer();
+  const port = await listen(flawradar);
+  flawradarUrl = `http://127.0.0.1:${port}`;
 });
 
 after(async () => {
-  for (const s of [wsec, weak, blocker, down]) s?.close();
-  wsec?.closeAllConnections?.();
+  for (const s of [flawradar, weak, blocker, down]) s?.close();
+  flawradar?.closeAllConnections?.();
   weak?.closeAllConnections?.();
   db.close();
 });
 
 const json = async (path, options = {}) => {
-  const res = await fetch(`${wsecUrl}${path}`, {
+  const res = await fetch(`${flawradarUrl}${path}`, {
     ...options,
     headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...options.headers },
   });
@@ -160,7 +160,7 @@ test('deep scans are refused until ownership is proved, then find exposed files'
 
   const instructions = await post('/api/verify', { host: `http://${host}:${weakPort}` });
   assert.equal(instructions.status, 200);
-  assert.match(instructions.body.value, /^wsec-verify=[a-f0-9]{32}$/);
+  assert.match(instructions.body.value, /^flawradar-verify=[a-f0-9]{32}$/);
   // The token is stable for a host.
   const again = await post('/api/verify', { host: host });
   assert.equal(again.body.value, instructions.body.value);
@@ -196,7 +196,7 @@ test('fix download contains only the fixes that apply', async () => {
   const report = await scan(`http://127.0.0.1:${weakPort}`);
   const nginx = await json(`/api/scans/${report.id}/fix?server=nginx`);
   assert.equal(nginx.status, 200);
-  assert.match(nginx.headers.get('content-disposition'), /wsec-nginx\.conf/);
+  assert.match(nginx.headers.get('content-disposition'), /flawradar-nginx\.conf/);
   assert.match(nginx.body, /add_header Content-Security-Policy/);
   assert.match(nginx.body, /server_tokens off;/);
   const express = await json(`/api/scans/${report.id}/fix?server=express`);
@@ -243,26 +243,26 @@ test('api input handling', async () => {
 test('scanner details come from configuration', async () => {
   const { body } = await json('/api/scanner');
   assert.deepEqual(body.ips, ['203.0.113.10', '2001:db8::10']);
-  assert.match(body.userAgent, /^Wsec-Scanner\/[\d.]+ \(\+.+\/whitelist\)$/);
+  assert.match(body.userAgent, /^FlawRadar-Scanner\/[\d.]+ \(\+.+\/whitelist\)$/);
 });
 
 test('pages and assets are served with security headers', async () => {
-  for (const path of ['/', '/whitelist', '/verify', '/checks', '/about', '/assets/css/wsec.css', '/assets/js/components.js', '/robots.txt']) {
-    const res = await fetch(`${wsecUrl}${path}`);
+  for (const path of ['/', '/whitelist', '/verify', '/checks', '/about', '/assets/css/flawradar.css', '/assets/js/components.js', '/robots.txt']) {
+    const res = await fetch(`${flawradarUrl}${path}`);
     assert.equal(res.status, 200, path);
     assert.match(res.headers.get('content-security-policy'), /default-src 'none'/, path);
     assert.equal(res.headers.get('x-content-type-options'), 'nosniff', path);
     assert.equal(res.headers.get('x-frame-options'), 'DENY', path);
   }
-  const report = await fetch(`${wsecUrl}/report/${'a'.repeat(24)}`);
+  const report = await fetch(`${flawradarUrl}/report/${'a'.repeat(24)}`);
   assert.equal(report.status, 200);
   assert.equal(report.headers.get('x-robots-tag'), 'noindex');
-  assert.equal((await fetch(`${wsecUrl}/nothing-here`)).status, 404);
+  assert.equal((await fetch(`${flawradarUrl}/nothing-here`)).status, 404);
 });
 
 test('static serving cannot escape the public directory', async () => {
   const net = await import('node:net');
-  const port = new URL(wsecUrl).port;
+  const port = new URL(flawradarUrl).port;
   const raw = (target) =>
     new Promise((resolve) => {
       const socket = net.connect(Number(port), '127.0.0.1', () => {
@@ -274,14 +274,14 @@ test('static serving cannot escape the public directory', async () => {
     });
   for (const target of ['/assets/../../package.json', '/assets/%2e%2e/%2e%2e/package.json', '/assets/..%2f..%2fpackage.json', '/assets/%00']) {
     const response = await raw(target);
-    assert.doesNotMatch(response, /"name": "wsec"/, target);
+    assert.doesNotMatch(response, /"name": "flawradar"/, target);
     assert.match(response, /^HTTP\/1\.1 (400|404)/, target);
   }
 });
 
 test('the deep-scan page markup has no inline scripts or styles (CSP safe)', async () => {
   for (const path of ['/', '/whitelist', '/verify', '/checks', '/about', `/report/${'a'.repeat(24)}`]) {
-    const html = await (await fetch(`${wsecUrl}${path}`)).text();
+    const html = await (await fetch(`${flawradarUrl}${path}`)).text();
     assert.doesNotMatch(html, /\sstyle=/i, path);
     assert.doesNotMatch(html, /\son[a-z]+=/i, path);
     assert.doesNotMatch(html, /<script(?![^>]*\ssrc=)/i, path);

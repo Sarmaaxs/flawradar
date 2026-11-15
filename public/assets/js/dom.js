@@ -44,7 +44,7 @@ export function scannerInfo() {
   return infoPromise;
 }
 
-const TERMS_KEY = 'wsec-terms-accepted';
+const TERMS_KEY = 'flawradar-terms-accepted';
 
 /** The terms version this browser has accepted before, or null. Storage may be blocked, so every access is guarded. */
 export function rememberedTerms() {

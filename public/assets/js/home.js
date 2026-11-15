@@ -40,7 +40,7 @@ form.addEventListener('submit', async (event) => {
   }
   if (!terms.checked) {
     consent.classList.add('attention');
-    showError('Please confirm that you may test this site and accept the terms, so Wsec knows the scan is authorized.');
+    showError('Please confirm that you may test this site and accept the terms, so FlawRadar knows the scan is authorized.');
     terms.focus();
     return;
   }

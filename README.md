@@ -1,12 +1,14 @@
-# Wsec
+# FlawRadar
 
-A web security checker for developers devloped By Sarem Menur. Enter a website address and Wsec reports on its TLS setup, response headers, cookies, DNS records and a few well-known files, then gives you the configuration to fix what it found. It scans from fixed IP addresses that it publishes, so you can allow-list them in a firewall or WAF.
+A web security checker for developers developed by Sarem Menur. Enter a website address and FlawRadar reports on its TLS setup, response headers, cookies, DNS records and a few well-known files, then gives you the configuration to fix what it found. It scans from fixed IP addresses that it publishes, so you can allow-list them in a firewall or WAF.
 
 - 29 checks in 7 groups, each with an explanation and a fix for nginx, Apache or Express where one applies
+- Bounded multi-page crawl (home + a few same-origin paths) so security headers only set on other routes are not missed
 - Scanner IP and user agent page with ready-made rules for nginx, ModSecurity, fail2ban, ufw and Cloudflare
 - Deep scan (exposed `.git`, `.env`, backups, directory listings, HTTP methods) that only runs after the site owner proves control, by a file or a DNS record
+- Optional **allow record** (`flawradar-allow=1` as DNS TXT at `_flawradar.<host>` or a file at `/.well-known/flawradar-allow.txt`) raises the per-host rate limit so owners who want scans are not treated as noise
 - Reports with a score, grade, history against the previous scan, and downloadable server config
-- Source code check: drop a folder, files or a .zip on `/source` and 55 line rules plus 8 file checks look for hard-coded secrets, SQL injection, XSS, shell injection, weak crypto, turned-off TLS checks and risky config. Code is analysed in memory and never stored
+- Source code check: drop a folder, files or a .zip on `/source` and line rules plus file checks look for hard-coded secrets, SQL injection, XSS, shell injection, weak crypto, turned-off TLS checks and risky config. Known dependency CVEs are looked up via OSV when a lockfile is present. Code is analysed in memory and never stored
 - No dependencies. Node's standard library and its built-in SQLite module
 
 ## Requirements
@@ -29,8 +31,8 @@ npm test                 # unit and integration tests
 With Docker:
 
 ```sh
-docker build -t wsec .
-docker run -p 3000:3000 -v wsec-data:/data --env-file .env wsec
+docker build -t flawradar .
+docker run -p 3000:3000 -v flawradar-data:/data --env-file .env flawradar
 ```
 
 ## Settings
@@ -40,28 +42,28 @@ All settings are environment variables (or lines in `.env`). See `.env.example` 
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `PORT`, `HOST` | `3000`, `127.0.0.1` | Where the web server listens |
-| `WSEC_BASE_URL` | `http://localhost:PORT` | Public address of this instance, used in the user agent |
-| `WSEC_PUBLIC_IPS` | none | Addresses scans leave from. Shown on the Whitelist page |
-| `WSEC_EGRESS_IP` | none | Bind outgoing connections to this local address |
-| `WSEC_CONTACT` | none | Abuse contact shown on the Whitelist page |
-| `WSEC_TRUST_PROXY` | `0` | Read the client address from `X-Forwarded-For` |
-| `WSEC_SCANS_PER_HOUR` | `12` | Scans per visitor per hour |
-| `WSEC_SCANS_PER_HOST_PER_HOUR` | `6` | Scans per target host per hour |
-| `WSEC_MAX_CONCURRENT` | `4` | Scans running at once. More wait in a queue |
-| `WSEC_RETENTION_DAYS` | `30` | Reports are deleted after this many days |
-| `WSEC_SOURCE_PER_HOUR` | `20` | Source code checks per visitor per hour |
-| `WSEC_DATA_DIR` | `./data` | Where `wsec.db` is kept |
-| `WSEC_ALLOW_PRIVATE` | off | Development only. Allows private addresses and custom ports |
+| `FLAWRADAR_BASE_URL` | `http://localhost:PORT` | Public address of this instance, used in the user agent |
+| `FLAWRADAR_PUBLIC_IPS` | none | Addresses scans leave from. Shown on the Whitelist page |
+| `FLAWRADAR_EGRESS_IP` | none | Bind outgoing connections to this local address |
+| `FLAWRADAR_CONTACT` | none | Abuse contact shown on the Whitelist page |
+| `FLAWRADAR_TRUST_PROXY` | `0` | Read the client address from `X-Forwarded-For` |
+| `FLAWRADAR_SCANS_PER_HOUR` | `12` | Scans per visitor per hour |
+| `FLAWRADAR_SCANS_PER_HOST_PER_HOUR` | `6` | Scans per target host per hour |
+| `FLAWRADAR_MAX_CONCURRENT` | `4` | Scans running at once. More wait in a queue |
+| `FLAWRADAR_RETENTION_DAYS` | `30` | Reports are deleted after this many days |
+| `FLAWRADAR_SOURCE_PER_HOUR` | `20` | Source code checks per visitor per hour |
+| `FLAWRADAR_DATA_DIR` | `./data` | Where `flawradar.db` is kept |
+| `FLAWRADAR_ALLOW_PRIVATE` | off | Development only. Allows private addresses and custom ports |
 
 ### Publishing real scanner IPs
 
-The whitelist feature is only useful if the addresses are true. Run Wsec on a host with a fixed public address (or a small set), put those in `WSEC_PUBLIC_IPS`, and make sure outgoing scan traffic really leaves from them. If the machine has several addresses, set `WSEC_EGRESS_IP` so connections are bound to the published one. Check it from outside: scan a server you control and read the source address in its access log.
+The whitelist feature is only useful if the addresses are true. Run FlawRadar on a host with a fixed public address (or a small set), put those in `FLAWRADAR_PUBLIC_IPS`, and make sure outgoing scan traffic really leaves from them. If the machine has several addresses, set `FLAWRADAR_EGRESS_IP` so connections are bound to the published one. Check it from outside: scan a server you control and read the source address in its access log.
 
 If the host sits behind NAT or a cloud gateway, publish the gateway's public address, not the machine's private one.
 
 ### Behind a reverse proxy
 
-Put nginx or Caddy in front for HTTPS and set `WSEC_TRUST_PROXY=1` so rate limits use the visitor's address. Only do this when the proxy is the only thing that can reach the app, because the header is otherwise easy to fake. Set `WSEC_BASE_URL` to the public https address and the app will send HSTS.
+Put nginx or Caddy in front for HTTPS and set `FLAWRADAR_TRUST_PROXY=1` so rate limits use the visitor's address. Only do this when the proxy is the only thing that can reach the app, because the header is otherwise easy to fake. Set `FLAWRADAR_BASE_URL` to the public https address and the app will send HSTS.
 
 ## How it works
 
@@ -96,7 +98,7 @@ test/               unit and integration tests
 
 ### Safety of the scanner itself
 
-A tool that makes requests to addresses chosen by strangers can be turned against its own host. Wsec handles that in several places:
+A tool that makes requests to addresses chosen by strangers can be turned against its own host. FlawRadar handles that in several places:
 
 - Host names are validated. IP literals, internal suffixes (`.local`, `.internal`) and custom ports are refused.
 - Every name is resolved and every address checked against private, loopback, link-local, multicast and other reserved ranges before connecting.
@@ -136,7 +138,7 @@ To add a rule, add an object to `RULES` with an `id`, `title`, `severity`, `conf
 
 ## Limits
 
-- It checks the home page. Headers set only on other paths are not seen.
+- It checks the home page plus a few same-origin paths. Headers set only on deep or unlinked paths may still be missed.
 - It reads policies as written; it does not run the page, so it cannot tell whether a CSP breaks the site.
 - DKIM cannot be checked from outside.
 - The scan queue and rate limiter are in memory, so this is built for one process. Reports survive restarts, in-flight scans do not.

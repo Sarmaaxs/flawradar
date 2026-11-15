@@ -4,7 +4,7 @@ import { fetchUrl } from './scanner/fetcher.js';
 import { makeResolver } from './scanner/dnsinfo.js';
 import { portsFor } from './scanner/scan.js';
 
-const FILE_PATH = '/.well-known/wsec-verify.txt';
+const FILE_PATH = '/.well-known/flawradar-verify.txt';
 
 /** One stable token per host. The owner can leave the proof in place. */
 export function tokenFor(host) {
@@ -17,12 +17,12 @@ export function tokenFor(host) {
 }
 
 export function instructions(target) {
-  const value = `wsec-verify=${tokenFor(target.host)}`;
+  const value = `flawradar-verify=${tokenFor(target.host)}`;
   return {
     host: target.host,
     value,
     file: { path: FILE_PATH, content: value },
-    dns: { name: `_wsec.${target.host}`, type: 'TXT', value },
+    dns: { name: `_flawradar.${target.host}`, type: 'TXT', value },
   };
 }
 
@@ -32,8 +32,8 @@ export function instructions(target) {
  * removing the file or record withdraws permission straight away.
  *
  * Accepted proof, either of:
- *   - a file at /.well-known/wsec-verify.txt on that exact host containing the value
- *   - a TXT record at _wsec.<host> containing the value
+ *   - a file at /.well-known/flawradar-verify.txt on that exact host containing the value
+ *   - a TXT record at _flawradar.<host> containing the value
  */
 export async function checkOwnership(target, { resolver, ports = portsFor(target) } = {}) {
   const { value } = instructions(target);
@@ -61,7 +61,7 @@ export async function checkOwnership(target, { resolver, ports = portsFor(target
   }
 
   if (!target.isIp) {
-    const name = `_wsec.${target.host}`;
+    const name = `_flawradar.${target.host}`;
     try {
       const records = (await (resolver || makeResolver()).resolveTxt(name)).map((chunks) => chunks.join(''));
       if (records.includes(value)) return { verified: true, method: 'dns', tried };

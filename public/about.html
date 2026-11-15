@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>About - Wsec</title>
-<meta name="description" content="What Wsec sends, what it keeps, and what it cannot tell you.">
-<link rel="stylesheet" href="/assets/css/wsec.css">
+<title>About - FlawRadar</title>
+<meta name="description" content="What FlawRadar sends, what it keeps, and what it cannot tell you.">
+<link rel="stylesheet" href="/assets/css/flawradar.css">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 </head>
 <body>
 <w-header current="about"></w-header>
 
 <main>
-  <h1>About Wsec</h1>
-  <p class="lead">Wsec is a small tool for developers who want to know how their site looks from the outside. It reads what the server already tells every visitor and points out the settings that are missing or wrong.</p>
+  <h1>About FlawRadar</h1>
+  <p class="lead">FlawRadar is a small tool for developers who want to know how their site looks from the outside. It reads what the server already tells every visitor and points out the settings that are missing or wrong.</p>
 
   <h2>What it sends</h2>
-  <p>Requests are read-only and come from the <a href="/whitelist">published addresses</a>. A normal scan makes about eight requests. A deep scan, which needs <a href="/verify">proof of control</a>, adds about twenty. Wsec never submits a form, logs in, or tries passwords, and it follows at most five redirects, checking every one before it connects.</p>
+  <p>Requests are read-only and come from the <a href="/whitelist">published addresses</a>. A normal scan makes about eight requests. A deep scan, which needs <a href="/verify">proof of control</a>, adds about twenty. FlawRadar never submits a form, logs in, or tries passwords, and it follows at most five redirects, checking every one before it connects.</p>
 
   <h2>What it keeps</h2>
   <p>Each report stores the host name, the time, the score, the findings, and short evidence such as header values. Page bodies are not stored. For the deep checks, a file counts as exposed only when its content matches the kind of file expected, and the content itself is thrown away. Reports are deleted after the retention period set by whoever runs the service. Anyone who has a report link can read the report, so treat the link like a password. Report pages ask search engines not to index them.</p>
@@ -33,14 +33,14 @@
     <li>It does not look for bugs in your code. A good score means the settings it checks are in place, not that the site is secure.</li>
     <li>Some checks look at what a browser would do (cookies, CSP). They read the policy as written and do not run the page.</li>
     <li>DKIM cannot be checked from outside because the selector name is not public.</li>
-    <li>Sites behind a firewall that blocks unknown scanners may refuse the request. Wsec reports that instead of grading the block page.</li>
+    <li>Sites behind a firewall that blocks unknown scanners may refuse the request. FlawRadar reports that instead of grading the block page.</li>
   </ul>
 
   <h2>Terms and privacy</h2>
-  <p>Before a scan or an upload, Wsec asks you to confirm that you own the site or code, or have written permission to test it, and to accept the <a href="/terms">Terms of Service</a>, the <a href="/acceptable-use">Acceptable Use Policy</a> and the <a href="/privacy">Privacy Policy</a>. The accepted version is recorded with the scan. Site owners can ask to be excluded from scanning; see the Acceptable Use Policy.</p>
+  <p>Before a scan or an upload, FlawRadar asks you to confirm that you own the site or code, or have written permission to test it, and to accept the <a href="/terms">Terms of Service</a>, the <a href="/acceptable-use">Acceptable Use Policy</a> and the <a href="/privacy">Privacy Policy</a>. The accepted version is recorded with the scan. Site owners can ask to be excluded from scanning; see the Acceptable Use Policy.</p>
 
   <h2>Running your own</h2>
-  <p>Wsec is a single Node.js process with an SQLite file. The README in the project explains the settings, including how to publish your own scanner addresses so people can allow-list them.</p>
+  <p>FlawRadar is a single Node.js process with an SQLite file. The README in the project explains the settings, including how to publish your own scanner addresses so people can allow-list them.</p>
 </main>
 
 <w-footer></w-footer>

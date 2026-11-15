@@ -1,7 +1,7 @@
 import { extractResources } from './html.js';
 
 // Sent as the Origin header on the CORS probe. The .invalid TLD never resolves.
-export const PROBE_ORIGIN = 'https://wsec-probe.invalid';
+export const PROBE_ORIGIN = 'https://flawradar-probe.invalid';
 
 const MDN = 'https://developer.mozilla.org/en-US/docs/Web/';
 const DEEP_SKIP = 'Deep scan not run. It needs proof that you control this host (see Verify).';
@@ -23,6 +23,18 @@ const headerFix = (name, value, text) => ({
 });
 
 const header = (ctx, name) => ctx.page?.res?.headers?.[name];
+
+/** Header present on home, or only on a crawled subpage (path-specific config). */
+function headerAnywhere(ctx, name) {
+  const home = header(ctx, name);
+  if (home) return { value: home, where: 'home' };
+  for (const p of ctx.extraPages || []) {
+    const v = p.res?.headers?.[name];
+    if (v) return { value: v, where: p.path };
+  }
+  return null;
+}
+
 
 export function parseCsp(value) {
   const out = {};
@@ -228,13 +240,20 @@ export const CHECKS = [
     ref: `${MDN}HTTP/Headers/Strict-Transport-Security`,
     run(ctx) {
       if (!ctx.page.https) return skip('The page was not served over HTTPS, so HSTS does not apply.');
-      const v = header(ctx, 'strict-transport-security');
+      const found = headerAnywhere(ctx, 'strict-transport-security');
+      const v = found?.value;
       const fix = headerFix(
         'Strict-Transport-Security',
         'max-age=31536000; includeSubDomains',
         'Send the header on every HTTPS response. Add "preload" only after reading hstspreload.org, because it is hard to undo.',
       );
       if (!v) return bad('No Strict-Transport-Security header.', { fix });
+      if (found.where !== 'home') {
+        return warn(`HSTS is set on ${found.where} but not on the home page. Send it on every HTTPS response.`, {
+          evidence: v,
+          fix,
+        });
+      }
       const m = /max-age\s*=\s*"?(\d+)/i.exec(v);
       if (!m) return bad('The header is present but has no valid max-age.', { evidence: v, fix });
       const age = Number(m[1]);
@@ -302,8 +321,16 @@ export const CHECKS = [
     why: 'Without nosniff, browsers may guess a file type and run an uploaded file as a script.',
     ref: `${MDN}HTTP/Headers/X-Content-Type-Options`,
     run(ctx) {
-      const v = header(ctx, 'x-content-type-options');
-      if (v && v.toLowerCase().includes('nosniff')) return ok('nosniff is set.');
+      const found = headerAnywhere(ctx, 'x-content-type-options');
+      const v = found?.value;
+      if (v && v.toLowerCase().includes('nosniff')) {
+        if (found.where !== 'home') {
+          return warn(`nosniff is set on ${found.where} but not on the home page.`, {
+            fix: headerFix('X-Content-Type-Options', 'nosniff', 'Send the header on every response.'),
+          });
+        }
+        return ok('nosniff is set.');
+      }
       return bad('X-Content-Type-Options: nosniff is not set.', {
         fix: headerFix('X-Content-Type-Options', 'nosniff', 'Send the header on every response.'),
       });
@@ -317,11 +344,27 @@ export const CHECKS = [
     why: 'If other sites can put yours in a frame, they can trick visitors into clicking buttons they cannot see.',
     ref: `${MDN}HTTP/Headers/X-Frame-Options`,
     run(ctx) {
-      const xfo = header(ctx, 'x-frame-options');
-      const csp = header(ctx, 'content-security-policy');
+      const xfoHome = header(ctx, 'x-frame-options');
+      const cspHome = header(ctx, 'content-security-policy');
+      const xfoFound = headerAnywhere(ctx, 'x-frame-options');
+      const cspFound = headerAnywhere(ctx, 'content-security-policy');
+      const xfo = xfoHome || xfoFound?.value;
+      const csp = cspHome || cspFound?.value;
       const fa = csp ? parseCsp(csp)['frame-ancestors'] : null;
-      if (fa) return ok(`CSP frame-ancestors is ${fa.join(' ')}.`);
-      if (xfo && /^(deny|sameorigin)$/i.test(xfo.trim())) return ok(`X-Frame-Options is ${xfo}.`);
+      if (fa) {
+        if (!cspHome && cspFound) {
+          return warn(`CSP frame-ancestors is set on ${cspFound.where} but not on the home page.`, {
+            evidence: csp,
+          });
+        }
+        return ok(`CSP frame-ancestors is ${fa.join(' ')}.`);
+      }
+      if (xfo && /^(deny|sameorigin)$/i.test(xfo.trim())) {
+        if (!xfoHome && xfoFound) {
+          return warn(`X-Frame-Options is set on ${xfoFound.where} but not on the home page.`, { evidence: xfo });
+        }
+        return ok(`X-Frame-Options is ${xfo}.`);
+      }
       const fix = headerFix(
         'X-Frame-Options',
         'SAMEORIGIN',

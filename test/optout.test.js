@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-process.env.WSEC_BLOCKED_HOSTS = 'blocked.example, .Opted-Out.example.org';
-process.env.WSEC_DB = ':memory:';
+process.env.FLAWRADAR_BLOCKED_HOSTS = 'blocked.example, .Opted-Out.example.org';
+process.env.FLAWRADAR_DB = ':memory:';
 
 const { isOptedOut, resolvePublic } = await import('../server/scanner/net.js');
 

@@ -5,13 +5,13 @@ COPY package.json ./
 COPY server ./server
 COPY public ./public
 
-# No dependencies to install: Wsec uses only Node's standard library.
+# No dependencies to install: FlawRadar uses only Node's standard library.
 RUN mkdir -p /data && chown node:node /data
 
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000 \
-    WSEC_DATA_DIR=/data
+    FLAWRADAR_DATA_DIR=/data
 
 USER node
 EXPOSE 3000

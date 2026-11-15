@@ -28,8 +28,8 @@ class WHeader extends HTMLElement {
       h(
         'header',
         { class: 'site-head' },
-        // The space and the dash are real text, so the name reads "Wsec - Web Security Checker" everywhere.
-        h('div', { class: 'brand' }, h('a', { href: '/' }, 'Wsec'), ' ', h('span', { class: 'tag' }, '— Web Security Checker')),
+        // The space and the dash are real text, so the name reads "FlawRadar - Web Security Checker" everywhere.
+        h('div', { class: 'brand' }, h('a', { href: '/' }, 'FlawRadar'), ' ', h('span', { class: 'tag' }, '— Web Security Checker')),
         nav,
       ),
     );

@@ -131,7 +131,7 @@ export async function lookupCves(packages, opts = {}) {
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
-          'User-Agent': 'Wsec-Scanner/0.1 (+https://wsec.example.com)',
+          'User-Agent': 'FlawRadar-Scanner/0.1 (+https://flawradar.pro.et)',
         },
         body: JSON.stringify({ queries }),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -173,7 +173,7 @@ export async function lookupCves(packages, opts = {}) {
           const res = await doFetch(`${OSV_VULN_URL}/${encodeURIComponent(id)}`, {
             headers: {
               Accept: 'application/json',
-              'User-Agent': 'Wsec-Scanner/0.1 (+https://wsec.example.com)',
+              'User-Agent': 'FlawRadar-Scanner/0.1 (+https://flawradar.pro.et)',
             },
             signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
           });

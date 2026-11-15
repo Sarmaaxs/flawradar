@@ -1,7 +1,7 @@
 // Deep checks look for files and settings that should not be public.
 // They only run against hosts whose owner has proved control (see verify.js).
 //
-// Wsec never stores or shows the content of these responses. A path counts
+// FlawRadar never stores or shows the content of these responses. A path counts
 // as exposed only when the body matches a signature for that kind of file,
 // so a site that answers 200 to everything does not produce false alarms.
 

@@ -9,18 +9,18 @@ function rules(ips, ua) {
   const quote = (s) => s.replace(/(["\\$])/g, '\\$1');
   const nginxAllow = ips.map((ip) => `    allow ${ip};`).join('\n');
   const nginx = [
-    '# Skip rate limiting for Wsec. "geo" belongs in the http { } block.',
-    'geo $wsec_scanner {',
+    '# Skip rate limiting for FlawRadar. "geo" belongs in the http { } block.',
+    'geo $flawradar_scanner {',
     '    default 0;',
     ...ips.map((ip) => `    ${ip} 1;`),
     '}',
     '',
-    'map $wsec_scanner $wsec_limit_key {',
+    'map $flawradar_scanner $flawradar_limit_key {',
     '    1 "";                       # an empty key is not counted',
     '    default $binary_remote_addr;',
     '}',
     '',
-    'limit_req_zone $wsec_limit_key zone=perip:10m rate=10r/s;',
+    'limit_req_zone $flawradar_limit_key zone=perip:10m rate=10r/s;',
     '',
     '# To restrict a path to these addresses only, inside a location block:',
     '# location /internal/ {',
@@ -60,7 +60,7 @@ function rules(ips, ua) {
     `  (ip.src in {${ips.join(' ')}})`,
     '  Skip: all managed rules, rate limiting rules, Bot Fight Mode / Super Bot Fight Mode',
     '',
-    `Optional second condition: and http.user_agent contains "Wsec-Scanner"`,
+    `Optional second condition: and http.user_agent contains "FlawRadar-Scanner"`,
     '',
     'Bot Fight Mode on the free plan cannot be skipped by a custom rule.',
     'If scans are still blocked, turn it off for the test or use IP Access Rules above.',
@@ -85,8 +85,8 @@ async function main() {
       h(
         'p',
         { class: 'alert warn' },
-        'This Wsec instance has no published scanner addresses. The person who runs it needs to set ',
-        h('code', {}, 'WSEC_PUBLIC_IPS'),
+        'This FlawRadar instance has no published scanner addresses. The person who runs it needs to set ',
+        h('code', {}, 'FLAWRADAR_PUBLIC_IPS'),
         ' to the address or addresses its outgoing requests leave from. Until then there is nothing to allow-list.',
       ),
     );

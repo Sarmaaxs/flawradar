@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Verify a site - Wsec</title>
-<meta name="description" content="Prove you control a website so Wsec can run deep checks against it.">
-<link rel="stylesheet" href="/assets/css/wsec.css">
+<title>Verify a site - FlawRadar</title>
+<meta name="description" content="Prove you control a website so FlawRadar can run deep checks against it.">
+<link rel="stylesheet" href="/assets/css/flawradar.css">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 </head>
 <body>
@@ -13,7 +13,7 @@
 
 <main>
   <h1>Prove you control a site</h1>
-  <p class="lead">The normal scan reads the same things a browser does. The deep scan asks for files such as <code>/.git/HEAD</code> and <code>/.env</code>. That is only polite to do on a site you run, so Wsec asks for a small proof first.</p>
+  <p class="lead">The normal scan reads the same things a browser does. The deep scan asks for files such as <code>/.git/HEAD</code> and <code>/.env</code>. That is only polite to do on a site you run, so FlawRadar asks for a small proof first.</p>
 
   <form id="verify-form" novalidate>
     <fieldset>
@@ -29,7 +29,7 @@
 
   <section id="proof" hidden>
     <h2>Add one of these</h2>
-    <p>The value is the same every time for this host, so you can leave the proof in place. Wsec checks it again at the start of each deep scan, so taking it down withdraws permission.</p>
+    <p>The value is the same every time for this host, so you can leave the proof in place. FlawRadar checks it again at the start of each deep scan, so taking it down withdraws permission.</p>
 
     <h3>Option 1: a file</h3>
     <p>Serve this text at <code id="file-url"></code> on that exact host:</p>

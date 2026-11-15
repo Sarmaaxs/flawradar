@@ -223,7 +223,7 @@ const api = {
 
   scanner(req, res) {
     sendJson(res, 200, {
-      name: 'Wsec',
+      name: 'FlawRadar',
       version: config.version,
       userAgent: userAgent(),
       ips: config.publicIps,
@@ -324,7 +324,7 @@ const api = {
     const text = buildFixConfig(result.findings, server, row.host);
     if (!text) throw new AppError(404, 'nothing_to_fix', 'No header or protocol fixes for that server in this report.');
     const ext = { nginx: 'conf', apache: 'conf', express: 'js' }[server];
-    sendText(res, 200, text, { 'Content-Disposition': `attachment; filename="wsec-${server}.${ext}"` });
+    sendText(res, 200, text, { 'Content-Disposition': `attachment; filename="flawradar-${server}.${ext}"` });
   },
 
   sourceRules(req, res) {
@@ -360,7 +360,7 @@ const api = {
 
   async sourceZip(req, res) {
     limitSource(req);
-    requireTerms(req.headers['x-wsec-terms']);
+    requireTerms(req.headers['x-flawradar-terms']);
     const type = String(req.headers['content-type'] || '');
     if (!/^application\/(?:zip|x-zip-compressed|octet-stream)/.test(type)) {
       throw new AppError(415, 'unsupported_media_type', 'Send the zip file as the request body.');
@@ -412,7 +412,7 @@ const routes = [
 async function route(req, res) {
   let url;
   try {
-    url = new URL(req.url, 'http://wsec.local');
+    url = new URL(req.url, 'http://flawradar.local');
   } catch {
     throw new AppError(400, 'bad_request', 'Bad request.');
   }

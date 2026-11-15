@@ -64,7 +64,7 @@ async function run(files, skippedDirs) {
       result = await api('/api/source/zip', {
         method: 'POST',
         body: zip,
-        headers: { 'Content-Type': 'application/zip', 'X-Wsec-Terms': termsVersion || '' },
+        headers: { 'Content-Type': 'application/zip', 'X-FlawRadar-Terms': termsVersion || '' },
       });
     } else {
       result = await upload(files, skippedDirs);
@@ -89,7 +89,7 @@ async function upload(files, skippedDirs) {
   const picked = files.filter((f) => wanted(f.path.replace(/^\/+/, '')));
   const ignoredZips = files.filter((f) => /\.zip$/i.test(f.path)).length;
   if (!picked.length) {
-    fail('None of those files are source code Wsec reads. It looks at web, script and config files such as .js, .php, .py, .html, .json and .env.');
+    fail('None of those files are source code FlawRadar reads. It looks at web, script and config files such as .js, .php, .py, .html, .json and .env.');
     return null;
   }
   if (picked.length > limits.maxFiles) {

@@ -58,6 +58,60 @@ async function findSecurityTxt(base) {
   return { found: false };
 }
 
+
+const MAX_CRAWL_PAGES = 3;
+const CRAWL_CANDIDATES = ['/login', '/signin', '/account', '/app', '/dashboard', '/admin', '/about', '/contact', '/pricing', '/docs'];
+
+/** Same-origin internal paths from the home page, plus a few common routes. */
+function pickCrawlPaths(homeRes, limit = MAX_CRAWL_PAGES) {
+  const origin = new URL(homeRes.url).origin;
+  const host = new URL(homeRes.url).hostname;
+  const seen = new Set(['/', '']);
+  const out = [];
+
+  const consider = (raw) => {
+    if (!raw || raw.startsWith('#') || raw.startsWith('mailto:') || raw.startsWith('javascript:')) return;
+    let u;
+    try {
+      u = new URL(raw, homeRes.url);
+    } catch {
+      return;
+    }
+    if (u.origin !== origin) return;
+    if (u.hostname !== host) return;
+    const path = u.pathname || '/';
+    if (seen.has(path)) return;
+    if (/\.(?:css|js|mjs|map|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|pdf|zip|xml|json)(?:$|\?)/i.test(path)) return;
+    seen.add(path);
+    out.push(path);
+  };
+
+  for (const m of homeRes.body.matchAll(/\b(?:href|src)\s*=\s*["']([^"']+)["']/gi)) {
+    consider(m[1]);
+    if (out.length >= limit * 3) break;
+  }
+  for (const p of CRAWL_CANDIDATES) consider(p);
+
+  // Prefer short, interesting paths
+  out.sort((a, b) => a.split('/').length - b.split('/').length || a.length - b.length);
+  return out.slice(0, limit);
+}
+
+async function crawlExtraPages(homeRes, base, tryFetchFn) {
+  const paths = pickCrawlPaths(homeRes);
+  const pages = [];
+  for (const path of paths) {
+    const r = await tryFetchFn(`${base}${path}`, { maxBytes: 200_000, maxRedirects: 3 });
+    if (!r.res || r.res.status >= 400) continue;
+    const finalHost = new URL(r.res.url).hostname;
+    const homeHost = new URL(homeRes.url).hostname;
+    if (finalHost !== homeHost) continue;
+    pages.push({ path, res: r.res });
+    if (pages.length >= MAX_CRAWL_PAGES) break;
+  }
+  return pages;
+}
+
 /**
  * Run every check against a target.
  *
@@ -72,6 +126,7 @@ export async function runScan(target, options = {}) {
     host: target.host,
     ports,
     page: null,
+    extraPages: [],
     http: null,
     tls: null,
     cors: null,
@@ -189,6 +244,15 @@ export async function runScan(target, options = {}) {
   }
   await Promise.all(tasks);
 
+  // 2b. A few same-origin pages so path-only headers are not missed.
+  await step(
+    'Check a few more pages',
+    async () => {
+      ctx.extraPages = await crawlExtraPages(ctx.page.res, base, tryFetch);
+    },
+    { soft: true },
+  );
+
   // 3. Deep probes, only when the caller has already proved ownership.
   if (deep) {
     await step(
@@ -206,6 +270,7 @@ export async function runScan(target, options = {}) {
   return {
     ...summaryBase,
     blocked: null,
+    pagesChecked: 1 + (ctx.extraPages?.length || 0),
     findings,
     ...summary,
     tls: ctx.tls?.ok

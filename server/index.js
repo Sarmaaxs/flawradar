@@ -14,12 +14,12 @@ setInterval(purge, 3_600_000).unref();
 
 const server = createServer();
 server.listen(config.port, config.host, () => {
-  console.log(`Wsec ${config.version} listening on http://${config.host}:${config.port}`);
+  console.log(`FlawRadar ${config.version} listening on http://${config.host}:${config.port}`);
   if (!config.publicIps.length) {
-    console.log('No WSEC_PUBLIC_IPS set. The Whitelist page will say this instance has no published scanner addresses.');
+    console.log('No FLAWRADAR_PUBLIC_IPS set. The Whitelist page will say this instance has no published scanner addresses.');
   }
   if (config.allowPrivate) {
-    console.log('WSEC_ALLOW_PRIVATE=1: private addresses and custom ports can be scanned. Do not use this in production.');
+    console.log('FLAWRADAR_ALLOW_PRIVATE=1: private addresses and custom ports can be scanned. Do not use this in production.');
   }
 });
 
