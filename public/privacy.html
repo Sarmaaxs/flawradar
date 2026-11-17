@@ -101,7 +101,7 @@
   <h2 id="source">Uploaded Source Code</h2>
   <div class="c">Files you upload are sent to the Service, analysed by automated pattern checks in the server's memory, and discarded when the response is sent. They are not written to disk, not placed in a log, not included in any stored Report, not read by a person, and not used to train any model. Zip files are opened in memory and are not extracted to disk.</div>
   <div class="c">The results are returned only to your browser. A finding shows the file name, the line number and the line itself. Where the Service recognises a secret (for example a cloud key or a token), it shows only the first characters of it. Other sensitive text on the same line may appear in the result that is returned to you, and the result is not stored by the Service. Your browser and any device you use may keep it, so close the page when you are done.</div>
-  <div class="c">Do not upload secrets or personal data of other people. If you would prefer that your code does not leave your computer, you can run FlawRadar yourself; the project's README explains how.</div>
+  <div class="c">Do not upload secrets or personal data of other people. Prefer to strip or redact secrets before upload when you can.</div>
   <div class="c">The Service is hosted on infrastructure that may handle memory in ways outside our control (for example swap files or crash diagnostics). We have not designed the Service to retain uploaded code, but we cannot promise that no trace could ever exist at the infrastructure level.</div>
 
   <h2 id="use">How We Use Data</h2>
