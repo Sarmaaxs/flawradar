@@ -12,6 +12,7 @@ import { startScan } from './scans.js';
 import { checkOwnership, instructions } from './verify.js';
 import { checkAllow, allowInstructions } from './allow.js';
 import { analyzeFiles, ruleCatalog } from './source/analyze.js';
+import { lookupCves } from './source/cves.js';
 import { readZip } from './source/zip.js';
 
 const PUBLIC = path.join(config.root, 'public');
@@ -131,9 +132,9 @@ async function readJson(req, limit = 4096) {
   }
 }
 
-async function serveFile(req, res, relative, { cache = 'no-cache', extra = {} } = {}) {
-  const full = path.resolve(PUBLIC, `.${path.sep}${relative}`);
-  if (!full.startsWith(PUBLIC + path.sep) || relative.includes('\0')) throw new AppError(404, 'not_found', 'Not found.');
+async function serveFile(req, res, relative, { cache = 'no-cache', extra = {}, root = PUBLIC } = {}) {
+  const full = path.resolve(root, `.${path.sep}${relative}`);
+  if (!full.startsWith(root + path.sep) || relative.includes('\0')) throw new AppError(404, 'not_found', 'Not found.');
   let stat;
   try {
     stat = await fs.promises.stat(full);
@@ -355,7 +356,27 @@ const api = {
       }
       files.push({ path: f.path.slice(0, 500), content: f.content });
     }
-    sendJson(res, 200, await analyzeFiles(files));
+    sendJson(res, 200, await analyzeFiles(files, { maxFileBytes: config.maxFileBytes }));
+  },
+
+  // The browser checks the code itself. For the vulnerability lookup it sends only package names and
+  // versions (no code) and this relays them to OSV, because the page's security policy does not let
+  // it talk to other sites.
+  async cves(req, res) {
+    limitSource(req);
+    const body = await readJson(req, 256 * 1024);
+    requireTerms(body.terms);
+    if (!Array.isArray(body.packages) || !body.packages.length || body.packages.length > 180) {
+      throw new AppError(400, 'bad_packages', 'Send between 1 and 180 packages.');
+    }
+    const packages = [];
+    for (const p of body.packages) {
+      const ok = p && typeof p.name === 'string' && typeof p.version === 'string' && typeof p.file === 'string' &&
+        ['npm', 'PyPI'].includes(p.ecosystem) && p.name.length <= 214 && p.version.length <= 100;
+      if (!ok) throw new AppError(400, 'bad_packages', 'Each package needs a name, version, ecosystem (npm or PyPI) and file.');
+      packages.push({ name: p.name, version: p.version, ecosystem: p.ecosystem, file: p.file.slice(0, 500), line: Number.isInteger(p.line) ? p.line : 1 });
+    }
+    sendJson(res, 200, await lookupCves(packages));
   },
 
   async sourceZip(req, res) {
@@ -371,7 +392,7 @@ const api = {
       maxFileBytes: config.maxFileBytes,
       maxTotalBytes: config.maxSourceTotalBytes,
     });
-    sendJson(res, 200, await analyzeFiles(files, { skipped, notices }));
+    sendJson(res, 200, await analyzeFiles(files, { skipped, notices, maxFileBytes: config.maxFileBytes }));
   },
 
   async verify(req, res) {
@@ -405,6 +426,7 @@ const routes = [
   ['GET', /^\/api\/source\/rules$/, api.sourceRules],
   ['POST', /^\/api\/source$/, api.source],
   ['POST', /^\/api\/source\/zip$/, api.sourceZip],
+  ['POST', /^\/api\/cves$/, api.cves],
   ['POST', /^\/api\/verify$/, api.verify],
   ['POST', /^\/api\/verify\/check$/, api.verifyCheck],
 ];
@@ -437,6 +459,10 @@ async function route(req, res) {
   if (new RegExp(`^/report/${ID}$`).test(pathname)) {
     return serveFile(req, res, 'report.html', { cache: 'no-cache', extra: { 'X-Robots-Tag': 'noindex' } });
   }
+  // The source checker runs in the browser. It loads the very same rule files the server uses,
+  // so the two cannot drift apart.
+  const engine = pathname.match(/^\/assets\/engine\/(analyze|rules|filechecks|paths|cves)\.js$/);
+  if (engine) return serveFile(req, res, `${engine[1]}.js`, { root: path.join(config.root, 'server', 'source') });
   if (pathname === '/robots.txt') return serveFile(req, res, 'robots.txt');
   if (pathname.startsWith('/assets/')) {
     let decoded;

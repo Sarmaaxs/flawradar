@@ -1,10 +1,13 @@
-import { config } from '../config.js';
 import { RULES, ruleCatalog } from './rules.js';
 import { runFileChecks } from './filechecks.js';
 import { runCveChecks } from './cves.js';
-import { extension, isTestPath, normalizePath, skipReason } from './paths.js';
+import { MANIFEST_FOR_CVE, extension, isTestPath, normalizePath, skipReason } from './paths.js';
 
 export { ruleCatalog };
+
+// This file runs in two places: on the server (the API) and in the visitor's browser (the source page).
+// Keep it free of Node-only imports.
+const DEFAULT_MAX_FILE_BYTES = 512 * 1024;
 
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 const MAX_LINE = 1000; // longer lines are minified or generated; skip them
@@ -40,7 +43,7 @@ function rulesFor(ext) {
   return rulesByExt.get(ext);
 }
 
-const tick = () => new Promise((resolve) => setImmediate(resolve));
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 /**
  * Analyse uploaded files in memory. Nothing is written anywhere.
@@ -48,11 +51,9 @@ const tick = () => new Promise((resolve) => setImmediate(resolve));
  * @param input    [{ path, content }]
  * @param options  { skipped: [{ path, reason }] } files a caller already dropped (for example from a zip)
  */
-/** Manifests we still want to read for CVE lookup even though line rules skip them. */
-const MANIFEST_FOR_CVE = /(?:^|\/)(?:package-lock\.json|package\.json|requirements[\w.-]*\.txt)$/i;
-
 export async function analyzeFiles(input, options = {}) {
   const started = Date.now();
+  const maxFileBytes = options.maxFileBytes || DEFAULT_MAX_FILE_BYTES;
   const skipped = [...(options.skipped || [])];
   const seen = new Set();
   const files = [];
@@ -72,10 +73,10 @@ export async function analyzeFiles(input, options = {}) {
     if (reason) {
       skipped.push({ path, reason });
       // Still keep dependency manifests for OSV lookup (they are skipped for line rules).
-      if (MANIFEST_FOR_CVE.test(path) && item.content && !item.content.includes('\0') && item.content.length <= config.maxFileBytes) {
+      if (MANIFEST_FOR_CVE.test(path) && item.content && !item.content.includes('\0') && item.content.length <= maxFileBytes) {
         manifestFiles.push({ path, content: item.content });
       }
-    } else if (item.content.length > config.maxFileBytes) {
+    } else if (item.content.length > maxFileBytes) {
       skipped.push({ path, reason: 'large' });
     } else if (item.content.includes('\0')) {
       skipped.push({ path, reason: 'binary' });
@@ -88,6 +89,8 @@ export async function analyzeFiles(input, options = {}) {
   for (const s of options.skipped || []) {
     const p = normalizePath(s.path);
     if (p && !seen.has(p)) allPaths.push(p);
+    // A caller that already read a lockfile hands over its text for the vulnerability lookup.
+    if (p && typeof s.content === 'string' && MANIFEST_FOR_CVE.test(p)) manifestFiles.push({ path: p, content: s.content });
   }
 
   const findings = [];
@@ -170,7 +173,7 @@ export async function analyzeFiles(input, options = {}) {
   const skippedDirs = [...new Set(skipped.filter((s) => s.reason.startsWith('folder:')).map((s) => s.reason.slice(7)))];
   const notices = [];
   if (skippedDirs.length) notices.push(`Skipped folders: ${skippedDirs.join(', ')}. Dependencies and build output are not scanned.`);
-  if (skipped.some((s) => s.reason === 'large')) notices.push(`Some files were larger than ${Math.round(config.maxFileBytes / 1024)} KB and were not read.`);
+  if (skipped.some((s) => s.reason === 'large')) notices.push(`Some files were larger than ${Math.round(maxFileBytes / 1024)} KB and were not read.`);
   if (longLines) notices.push(`${longLines} very long lines (minified or generated code) were skipped.`);
   if (truncated) notices.push(`Only the first ${MAX_FINDINGS} findings are shown.`);
   if (cvePackages) {

@@ -13,16 +13,16 @@
 
 <main>
   <h1>Check your source code</h1>
-  <p class="lead">Drop the folder (or a .zip) of your website's code. FlawRadar reads it for hard-coded secrets, SQL injection and cross-site scripting patterns, shell commands built from strings, weak crypto, turned-off TLS checks, and risky settings in config and dependency files.</p>
+  <p class="lead">Drop the folder (or a .zip) of your website's code. Your browser reads it for hard-coded secrets, SQL injection and cross-site scripting patterns, shell commands built from strings, weak crypto, turned-off TLS checks, and risky settings in config and dependency files.</p>
 
   <div class="notice">
-    <b>Your code is not kept.</b> Files are sent to this server, analysed in memory and thrown away. No report is saved and there is no link to share. Secrets found in the code are shown only as the first few characters.
+    <b>Your code stays on your computer.</b> The check runs inside this page, in your browser. Your files are not sent to FlawRadar, not stored, and there is no report or link to share. The one thing that does leave is the list of package names and versions from a lockfile, sent to look up known vulnerabilities. You can confirm this: open your browser's developer tools, look at the Network tab and drop a folder. Secrets found in the code are shown only as the first few characters.
   </div>
 
   <div id="consent-box" class="consent">
     <div class="check">
       <input id="terms" type="checkbox">
-      <label for="terms">I have the right to upload this code and to have it checked, and I accept the <a href="/terms">Terms of Service</a>, the <a href="/acceptable-use">Acceptable Use Policy</a> and the <a href="/privacy">Privacy Policy</a>.</label>
+      <label for="terms">I have the right to check this code, and I accept the <a href="/terms">Terms of Service</a>, the <a href="/acceptable-use">Acceptable Use Policy</a> and the <a href="/privacy">Privacy Policy</a>.</label>
     </div>
   </div>
 

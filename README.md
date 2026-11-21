@@ -8,7 +8,7 @@ A web security checker for developers developed by Sarem Menur. Enter a website 
 - Deep scan (exposed `.git`, `.env`, backups, directory listings, HTTP methods) that only runs after the site owner proves control, by a file or a DNS record
 - Optional **allow record** (`flawradar-allow=1` as DNS TXT at `_flawradar.<host>` or a file at `/.well-known/flawradar-allow.txt`) raises the per-host rate limit so owners who want scans are not treated as noise
 - Reports with a score, grade, history against the previous scan, and downloadable server config
-- Source code check: drop a folder, files or a .zip on `/source` and line rules plus file checks look for hard-coded secrets, SQL injection, XSS, shell injection, weak crypto, turned-off TLS checks and risky config. Known dependency CVEs are looked up via OSV when a lockfile is present. Code is analysed in memory and never stored
+- Source code check: drop a folder, files or a .zip on `/source` and line rules plus file checks look for hard-coded secrets, SQL injection, XSS, shell injection, weak crypto, turned-off TLS checks and risky config. Known dependency CVEs are looked up via OSV when a lockfile is present. The check runs in the visitor's browser, so code never reaches the server (only package names and versions go to the server for the CVE lookup). The `/api/source` endpoints stay for people who run their own copy
 - No dependencies. Node's standard library and its built-in SQLite module
 
 ## Requirements
