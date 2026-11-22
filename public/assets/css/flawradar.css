@@ -21,7 +21,50 @@
 
 * { box-sizing: border-box; }
 
-html { background: var(--desk); }
+/* The page sits on a plain blue sky with a few flat clouds, the way a 1999 homepage might. Only
+   gradients, so there are no image files and nothing for the security policy to block. */
+html {
+  background-color: #86bff0;
+  background-image: linear-gradient(#2f78cf 0%, #6cb0ec 40%, #b9defa 78%, #e3f3fd 100%);
+  background-attachment: fixed;
+}
+
+/* Two layers of clouds, drawn with gradients only. Each is a tile 1600px wide that slides one tile
+   to the left and starts over, so the loop has no seam. The far layer is smaller and slower. */
+html::before, html::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: calc(100% + 1600px);
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+  background-repeat: repeat-x;
+  background-size: 1600px 100%;
+}
+html::before {
+  opacity: .8;
+  background-image:
+    radial-gradient(ellipse 90px 24px at 200px 9%, #fff 60%, rgba(255,255,255,0) 72%),
+    radial-gradient(ellipse 60px 22px at 168px 7.5%, #fff 60%, rgba(255,255,255,0) 72%),
+    radial-gradient(ellipse 70px 22px at 236px 8%, #fff 60%, rgba(255,255,255,0) 72%),
+    radial-gradient(ellipse 100px 26px at 900px 22%, #fff 60%, rgba(255,255,255,0) 72%),
+    radial-gradient(ellipse 66px 22px at 866px 20.5%, #fff 60%, rgba(255,255,255,0) 72%),
+    radial-gradient(ellipse 80px 24px at 1330px 12%, #fff 60%, rgba(255,255,255,0) 72%),
+    radial-gradient(ellipse 56px 20px at 1296px 10.5%, #fff 60%, rgba(255,255,255,0) 72%);
+}
+html::after {
+  background-image:
+    radial-gradient(ellipse 150px 38px at 380px 30%, #fff 60%, rgba(255,255,255,0) 72%),
+    radial-gradient(ellipse 100px 34px at 330px 27%, #fff 60%, rgba(255,255,255,0) 72%),
+    radial-gradient(ellipse 110px 35px at 430px 27.5%, #fff 60%, rgba(255,255,255,0) 72%),
+    radial-gradient(ellipse 130px 36px at 1100px 56%, #fff 60%, rgba(255,255,255,0) 72%),
+    radial-gradient(ellipse 90px 32px at 1056px 53.5%, #fff 60%, rgba(255,255,255,0) 72%),
+    radial-gradient(ellipse 140px 38px at 1480px 78%, #fff 60%, rgba(255,255,255,0) 72%),
+    radial-gradient(ellipse 95px 33px at 1436px 75.5%, #fff 60%, rgba(255,255,255,0) 72%),
+    radial-gradient(ellipse 105px 34px at 1530px 76%, #fff 60%, rgba(255,255,255,0) 72%);
+}
 
 body {
   max-width: 58rem;
@@ -29,8 +72,9 @@ body {
   margin: 0 auto;
   padding: 0 1.25rem 2rem;
   background: var(--paper);
-  border-left: 1px solid var(--rule);
-  border-right: 1px solid var(--rule);
+  border-left: 1px solid #1d4f8c;
+  border-right: 1px solid #1d4f8c;
+  box-shadow: 0 0 14px rgba(15, 50, 100, .35);
   color: var(--ink);
   font: 16px/1.55 var(--serif);
 }
@@ -247,4 +291,96 @@ ol.plain li { margin: .4rem 0; }
   .row { flex-direction: column; }
   .finding > summary { grid-template-columns: 1fr; gap: .1rem; }
   h1 { font-size: 1.55rem; }
+}
+/* ---- Print and save-as-PDF: plain black on white, no controls, links spelled out */
+@media print {
+  html { background: #fff; }
+  body { background: #fff; color: #000; box-shadow: none; border: 0; }
+  .site-head, .site-foot, .actions, .toolbar, #delete-area, #deep-note, #allow-note, #downloads, w-header, w-footer { display: none !important; }
+  main { max-width: none; margin: 0; padding: 0; }
+  .finding { break-inside: avoid; border-color: #000; }
+  a { color: #000; text-decoration: underline; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: .8em; }
+  pre { white-space: pre-wrap; word-break: break-word; }
+}
+
+
+/* ---- The radar shown while a scan runs */
+.radar {
+  position: relative;
+  width: 7.5rem;
+  height: 7.5rem;
+  margin: .4rem 0 1rem;
+  border-radius: 50%;
+  border: 3px solid var(--ink);
+  background:
+    linear-gradient(rgba(93,255,122,.35), rgba(93,255,122,.35)) center / 100% 1px no-repeat,
+    linear-gradient(rgba(93,255,122,.35), rgba(93,255,122,.35)) center / 1px 100% no-repeat,
+    repeating-radial-gradient(circle, transparent 0 1.1rem, rgba(93,255,122,.45) 1.1rem calc(1.1rem + 1px)),
+    #06240f;
+  overflow: hidden;
+}
+.radar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(93,255,122,0) 0deg 270deg, rgba(93,255,122,.8) 360deg);
+}
+.radar i {
+  position: absolute;
+  width: .45rem;
+  height: .45rem;
+  border-radius: 50%;
+  background: #b6ffc4;
+  box-shadow: 0 0 6px #5dff7a;
+  opacity: 0;
+}
+.radar i:nth-child(1) { left: 62%; top: 26%; }
+.radar i:nth-child(2) { left: 30%; top: 64%; }
+.radar i:nth-child(3) { left: 70%; top: 70%; }
+
+/* ---- Motion. Everything below switches off for people who ask their system for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes drift { from { transform: translateX(0); } to { transform: translateX(-1600px); } }
+  html::before { animation: drift 260s linear infinite; }
+  html::after { animation: drift 150s linear infinite; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .radar::before { animation: spin 2.4s linear infinite; }
+
+  @keyframes blip { 0%, 100% { opacity: 0; } 8% { opacity: 1; } 55% { opacity: 0; } }
+  .radar i:nth-child(1) { animation: blip 2.4s linear infinite .2s; }
+  .radar i:nth-child(2) { animation: blip 2.4s linear infinite 1.1s; }
+  .radar i:nth-child(3) { animation: blip 2.4s linear infinite 1.8s; }
+
+  @keyframes blink { 50% { opacity: .25; } }
+  .steps li.running { animation: blink 1s steps(2, start) infinite; }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  main > h1, main > .lead { animation: rise .45s ease-out both; }
+  main > form, main > .lead + * { animation: rise .45s ease-out .08s both; }
+  .finding { animation: rise .35s ease-out both; }
+  .finding:nth-child(1) { animation-delay: .02s; } .finding:nth-child(2) { animation-delay: .06s; }
+  .finding:nth-child(3) { animation-delay: .1s; } .finding:nth-child(4) { animation-delay: .14s; }
+  .finding:nth-child(5) { animation-delay: .18s; } .finding:nth-child(6) { animation-delay: .22s; }
+
+  /* The grade lands like a rubber stamp. */
+  @keyframes stamp {
+    0% { transform: scale(2.4) rotate(-14deg); opacity: 0; }
+    55% { transform: scale(.92) rotate(2deg); opacity: 1; }
+    75% { transform: scale(1.05) rotate(-1deg); }
+    100% { transform: scale(1) rotate(0); }
+  }
+  w-score .grade { animation: stamp .55s cubic-bezier(.2, .8, .3, 1) both; transform-origin: center; }
+  w-score .bar i { transform-origin: left; animation: fill .9s steps(14) .3s both; }
+  @keyframes fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+  button, a.button { transition: transform .06s ease-out; }
+  button:active:not(:disabled), a.button:active { transform: translateY(1px); }
+  .site-head nav a { transition: background .12s, color .12s; }
+}
+
+@media print {
+  html::before, html::after, .radar { display: none !important; }
 }
