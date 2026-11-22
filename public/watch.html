@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Watch a site - FlawRadar</title>
+<meta name="description" content="FlawRadar scans a site you control on a schedule and emails you when its grade gets worse.">
+<link rel="stylesheet" href="/assets/css/flawradar.css">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<w-header current="watch"></w-header>
+
+<main>
+  <section id="mode-form">
+    <h1>Watch a site</h1>
+    <p class="lead">FlawRadar scans your site again every day and emails you when its grade gets worse. No account and no password: your email address is confirmed with a link.</p>
+    <p id="off" class="alert" hidden>This server cannot send email, so watches are switched off here.</p>
+
+    <form id="watch-form" novalidate>
+      <fieldset>
+        <legend>Site and address</legend>
+        <label for="host">Site you control</label>
+        <input id="host" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="example.com" required>
+        <label for="email">Email address for alerts</label>
+        <input id="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+        <div id="consent-box" class="consent">
+          <div class="check">
+            <input id="terms" type="checkbox">
+            <label for="terms">I own this site or have written permission to scan it every day, and I accept the <a href="/terms">Terms of Service</a>, the <a href="/acceptable-use">Acceptable Use Policy</a> and the <a href="/privacy">Privacy Policy</a>.</label>
+          </div>
+        </div>
+        <p><button type="submit" id="go">Start watching</button></p>
+        <p id="error" class="alert" role="alert" hidden></p>
+        <p id="done" class="notice" role="status" hidden></p>
+      </fieldset>
+    </form>
+
+    <h2>How it works</h2>
+    <ol>
+      <li>You <a href="/verify">prove you control the site</a> with a small file or a DNS record. This stops anyone from having a site scanned daily that they do not run.</li>
+      <li>You enter the site and your email address here. A confirmation link is sent to that address.</li>
+      <li>Once confirmed, the first scan sets the baseline. After that, a scan runs about every <span id="interval">24</span> hours.</li>
+      <li>You get an email when the grade drops, or the score falls by 10 points or more. Nothing is sent when things stay the same.</li>
+      <li>Every email has a link that stops the watch. Taking the proof off your site also stops it.</li>
+    </ol>
+    <p><small>The scans are the normal read-only scan, from the <a href="/whitelist">published addresses</a>. Your email address is used only for the confirmation and the alerts, and is deleted when you stop the watch. See the <a href="/privacy#watches">Privacy Policy</a>.</small></p>
+  </section>
+
+  <section id="mode-confirm" hidden>
+    <h1>Confirm your watch</h1>
+    <p class="lead">Press the button to start watching <b id="confirm-host">this site</b>.</p>
+    <p><button type="button" id="confirm">Confirm and start watching</button></p>
+    <p id="confirm-out" class="notice" role="status" hidden></p>
+  </section>
+
+  <section id="mode-stop" hidden>
+    <h1>Stop watching</h1>
+    <p class="lead">Press the button to stop the scans and delete your email address from this watch.</p>
+    <p><button type="button" id="stop">Stop watching</button></p>
+    <p id="stop-out" class="notice" role="status" hidden></p>
+  </section>
+</main>
+
+<w-footer></w-footer>
+<script type="module" src="/assets/js/watch.js"></script>
+</body>
+</html>
