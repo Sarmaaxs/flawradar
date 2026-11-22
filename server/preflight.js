@@ -1,5 +1,5 @@
 import net from 'node:net';
-import { config } from './config.js';
+import { config, isLocalUrl } from './config.js';
 
 /**
  * Things that must be true before this is shown to the public. Returns a list of
@@ -10,7 +10,7 @@ export function preflight(cfg = config, env = process.env) {
   const out = [];
   const add = (level, message) => out.push({ level, message });
   const isHttps = cfg.baseUrl.startsWith('https://');
-  const local = /^https?:\/\/(localhost|127\.|\[::1\])/.test(cfg.baseUrl);
+  const local = isLocalUrl(cfg.baseUrl);
 
   if (cfg.allowPrivate) add('error', 'FLAWRADAR_ALLOW_PRIVATE=1 lets people scan private addresses. Never use it on a public instance.');
   if (local) {

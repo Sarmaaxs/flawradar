@@ -11,13 +11,13 @@ export function queueLength() {
   return queue.length;
 }
 
-export function startScan(target, { deep = false, termsVersion = null, allow = null } = {}) {
+export function startScan(target, { deep = false, termsVersion = null, allow = null, deleteHash = null, onDone = null } = {}) {
   if (queue.length >= config.maxQueuedScans) {
     throw new AppError(503, 'busy', 'FlawRadar is busy. Try again in a minute.');
   }
   const id = crypto.randomBytes(12).toString('hex');
-  db.insertScan({ id, host: target.host, url: target.input, deep, createdAt: Date.now(), termsVersion });
-  queue.push({ id, target, deep, allow });
+  db.insertScan({ id, host: target.host, url: target.input, deep, createdAt: Date.now(), termsVersion, deleteHash });
+  queue.push({ id, target, deep, allow, onDone });
   pump();
   return id;
 }
@@ -33,7 +33,7 @@ function pump() {
   }
 }
 
-async function execute({ id, target, deep, allow }) {
+async function execute({ id, target, deep, allow, onDone }) {
   const steps = [];
   const onStep = (name, state) => {
     const existing = steps.find((s) => s.name === name);
@@ -65,5 +65,12 @@ async function execute({ id, target, deep, allow }) {
     db.failScan(id, err instanceof AppError ? err.message : 'The scan failed unexpectedly.');
   } finally {
     clearTimeout(timer);
+    if (onDone) {
+      try {
+        await onDone(id);
+      } catch (err) {
+        console.error(`scan ${id} follow-up failed`, err);
+      }
+    }
   }
 }

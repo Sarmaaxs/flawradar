@@ -245,7 +245,9 @@ test('api input handling', async () => {
 test('scanner details come from configuration', async () => {
   const { body } = await json('/api/scanner');
   assert.deepEqual(body.ips, ['203.0.113.10', '2001:db8::10']);
-  assert.match(body.userAgent, /^FlawRadar-Scanner\/[\d.]+ \(\+.+\/whitelist\)$/);
+  // With no public address configured, the user agent carries no link rather than a local one.
+  assert.match(body.userAgent, /^FlawRadar-Scanner\/[\d.]+$/);
+  assert.equal(body.baseUrl, null);
 });
 
 test('pages and assets are served with security headers', async () => {

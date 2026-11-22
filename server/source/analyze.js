@@ -1,9 +1,10 @@
-import { RULES, ruleCatalog } from './rules.js';
+import { RULES, ruleCatalog as lineCatalog } from './rules.js';
 import { runFileChecks } from './filechecks.js';
+import { flowCatalog, flowFindings, secretFindings } from './flow.js';
 import { runCveChecks } from './cves.js';
 import { MANIFEST_FOR_CVE, extension, isTestPath, normalizePath, skipReason } from './paths.js';
 
-export { ruleCatalog };
+export const ruleCatalog = () => [...lineCatalog(), ...flowCatalog()];
 
 // This file runs in two places: on the server (the API) and in the visitor's browser (the source page).
 // Keep it free of Node-only imports.
@@ -105,6 +106,7 @@ export async function analyzeFiles(input, options = {}) {
     const rules = rulesFor(ext);
     const test = isTestPath(path);
     const perRule = new Map();
+    const fileStart = findings.length;
     const rows = content.split('\n');
     lines += rows.length;
 
@@ -137,6 +139,15 @@ export async function analyzeFiles(input, options = {}) {
           file: path, line: n + 1, snippet, why: rule.why, fix: rule.fix,
         });
       }
+    }
+
+    // Second pass over the same file: follow request data through variables, and look for secrets
+    // by how random they look. Lines that already have a finding are not reported twice.
+    const flagged = new Set(findings.slice(fileStart).map((f) => f.line));
+    if (!test) {
+      findings.push(...flowFindings(path, ext, rows, flagged));
+      for (const f of findings.slice(fileStart)) flagged.add(f.line);
+      if (!/\.(?:lock|md|txt)$/i.test(path)) findings.push(...secretFindings(path, rows, flagged));
     }
   }
 
@@ -191,7 +202,7 @@ export async function analyzeFiles(input, options = {}) {
       filesScanned: files.length,
       filesSkipped: skipped.length,
       lines,
-      rules: RULES.length,
+      rules: RULES.length + flowCatalog().length,
       packagesChecked: cveChecked,
       durationMs: Date.now() - started,
     },

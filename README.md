@@ -52,6 +52,12 @@ All settings are environment variables (or lines in `.env`). See `.env.example` 
 | `FLAWRADAR_MAX_CONCURRENT` | `4` | Scans running at once. More wait in a queue |
 | `FLAWRADAR_RETENTION_DAYS` | `30` | Reports are deleted after this many days |
 | `FLAWRADAR_SOURCE_PER_HOUR` | `20` | Source code checks per visitor per hour |
+| `FLAWRADAR_BLOCKED_HOSTS` | none | Hosts whose owners asked to be excluded (also covers subdomains) |
+| `FLAWRADAR_LEGAL_ENTITY`, `_ADDRESS`, `_EMAIL`, `_LAW`, `_ARBITRATION`, `_HOSTING`, `_LOG_RETENTION` | none | Filled into the Terms, Acceptable Use and Privacy pages |
+| `FLAWRADAR_SMTP_HOST`, `_PORT`, `_USER`, `_PASS`, `_FROM` | none | Mail server. Setting a host switches watches on |
+| `FLAWRADAR_WATCH_INTERVAL_HOURS` | `24` | How often a watched site is rescanned |
+| `FLAWRADAR_MAX_WATCHES_PER_EMAIL`, `FLAWRADAR_WATCH_SIGNUPS_PER_HOUR` | `5`, `6` | Limits for watch sign-ups |
+| `FLAWRADAR_BACKUP_DIR`, `_KEEP`, `_INTERVAL_HOURS` | off, `7`, `24` | Automatic database copies. The Docker image sets `/data/backups` |
 | `FLAWRADAR_DATA_DIR` | `./data` | Where `flawradar.db` is kept |
 | `FLAWRADAR_ALLOW_PRIVATE` | off | Development only. Allows private addresses and custom ports |
 
@@ -65,6 +71,25 @@ If the host sits behind NAT or a cloud gateway, publish the gateway's public add
 
 Put nginx or Caddy in front for HTTPS and set `FLAWRADAR_TRUST_PROXY=1` so rate limits use the visitor's address. Only do this when the proxy is the only thing that can reach the app, because the header is otherwise easy to fake. Set `FLAWRADAR_BASE_URL` to the public https address and the app will send HSTS.
 
+## Before you go public
+
+```sh
+npm run check
+```
+
+lists what still needs doing: real scanner IPs, the legal details, the contact address, the proxy setting, mail and backups. It exits with code 1 while anything marked FIX is open, and the same list is printed every time the server starts. [DEPLOY.md](DEPLOY.md) walks through it step by step.
+
+## Watches
+
+A visitor who has [proved control of a site](/verify) can ask for a watch: FlawRadar rescans it every day and emails when the grade gets worse (or the score falls by 10 points). The email address is confirmed by a link, every email has a link that stops the watch, and taking the ownership proof off the site stops it too. It needs `FLAWRADAR_SMTP_HOST`; without it the Watch page says so. The mail client is in `server/mail.js` (about 100 lines, TLS and STARTTLS, no dependencies) and the scheduler is in `server/watch.js`.
+
+## Deleting a report, printing, backups
+
+- The browser that started a scan keeps a secret in its local storage and gets a **Delete this report** button. Only a hash of the secret is stored on the server, so a report link alone cannot delete anything.
+- **Print or save as PDF** on the report page uses the browser's print dialog, with a print stylesheet that hides the controls and spells out links.
+- `FLAWRADAR_BACKUP_DIR` turns on copies of the database (SQLite `VACUUM INTO`, safe while running), `FLAWRADAR_BACKUP_KEEP` of them are kept. `npm run backup` makes one now. `/api/health` returns 503 when the database does not answer and shows the time of the last backup, so an uptime monitor can watch it.
+- `.github/workflows/test.yml` runs the tests on every push.
+
 ## How it works
 
 ```
@@ -73,6 +98,10 @@ server/
   app.js            routing, static files, API, security headers
   scans.js          scan queue and concurrency limit
   verify.js         ownership proof for deep scans
+  watch.js          watches: sign-up, confirmation, scheduled rescans, alerts
+  mail.js           small SMTP client
+  backup.js         automatic database copies
+  preflight.js      the go-live checklist behind `npm run check`
   db.js             SQLite storage (node:sqlite)
   ratelimit.js      sliding window limiter
   source/
@@ -81,6 +110,8 @@ server/
     filechecks.js   .env, Dockerfile, package.json, requirements.txt checks
     zip.js          minimal zip reader with zip-bomb limits (in memory, nothing extracted)
     paths.js        which files are read, and path cleaning
+    flow.js         follows request data through variables in one file; secrets by randomness
+    cves.js         known-vulnerability lookup for lockfiles (OSV)
   scanner/
     net.js          target parsing, private-address rules, DNS resolution
     fetcher.js      HTTP client, pins the connection to a checked address
@@ -121,6 +152,8 @@ The web interface is built without `innerHTML`, and the site serves a strict Con
 | `POST /api/verify/check` | Checks whether the proof is in place |
 | `POST /api/source` | Body `{"files": [{"path": "src/a.js", "content": "..."}]}`. Returns findings, nothing stored |
 | `POST /api/source/zip` | Body is the raw .zip, `Content-Type: application/zip` |
+| `POST /api/watch` | Body `{"url", "email", "terms"}`. Starts a watch; a confirmation link is emailed |
+| `DELETE /api/scans/:id` | Header `X-FlawRadar-Delete` with the secret returned when the scan was created |
 | `GET /api/source/rules` | The rule list and upload limits |
 | `GET /api/scanner` | Published addresses, user agent, contact |
 | `GET /api/checks` | The list of checks with explanations |
@@ -128,7 +161,7 @@ The web interface is built without `innerHTML`, and the site serves a strict Con
 
 ## Source code scanning
 
-The rules in `server/source/rules.js` match one line at a time. They find common mistakes and do not follow data from a request into a database call, so multi-line and cross-file bugs, and logic errors such as missing permission checks, are not found. Each rule has a confidence level because some matches are lookalikes.
+The rules in `server/source/rules.js` match one line at a time. On top of them, `server/source/flow.js` does a second pass over each JavaScript, TypeScript, Python and PHP file: it finds variables filled from request data (`req.query`, `$_GET`, `request.args`, `location.hash`), follows them into other variables, and reports when they reach a SQL string, a shell, `eval`, `innerHTML`, a file path, an outgoing request, a redirect or a module load. It also reports secret-named variables that hold random-looking values (entropy). It stays inside one file and does not follow data through function calls or across files, so each such finding is medium or low confidence, and logic errors such as missing permission checks are still not found. Add a sink by adding an object to `JS_SINKS`, `PY_SINKS` or `PHP_SINKS` and a case to `test/flow.test.js`.
 
 Known vulnerabilities in dependencies are looked up via the OSV API when a `package-lock.json` or pinned `requirements.txt` is present (and, less precisely, from `package.json` version ranges if no lockfile exists). The lookup is best-effort: if OSV is unreachable the scan still finishes and a notice is shown. Coverage is not complete — also run `npm audit`, `pip-audit` or `osv-scanner` in CI.
 

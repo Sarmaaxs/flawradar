@@ -1,14 +1,17 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { config, userAgent } from './config.js';
+import { config, isLocalUrl, userAgent } from './config.js';
 import { AppError } from './errors.js';
 import * as db from './db.js';
 import { Limiter } from './ratelimit.js';
 import { parseTarget, resolvePublic } from './scanner/net.js';
 import { listChecks } from './scanner/checks.js';
 import { buildFixConfig } from './scanner/fixes.js';
-import { startScan } from './scans.js';
+import { queueLength, startScan } from './scans.js';
+import * as watch from './watch.js';
+import * as backup from './backup.js';
 import { checkOwnership, instructions } from './verify.js';
 import { checkAllow, allowInstructions } from './allow.js';
 import { analyzeFiles, ruleCatalog } from './source/analyze.js';
@@ -20,6 +23,7 @@ const ID = '[a-f0-9]{24}';
 
 const scanLimiter = new Limiter({ limit: config.scansPerHour, windowMs: 3_600_000 });
 const verifyLimiter = new Limiter({ limit: config.verifyChecksPerHour, windowMs: 3_600_000 });
+const watchLimiter = new Limiter({ limit: config.watchSignupsPerHour, windowMs: 3_600_000 });
 const sourceLimiter = new Limiter({ limit: config.sourcePerHour, windowMs: 3_600_000 });
 
 const MIME = {
@@ -42,6 +46,9 @@ const PAGES = {
   '/terms': 'terms.html',
   '/acceptable-use': 'acceptable-use.html',
   '/privacy': 'privacy.html',
+  '/watch': 'watch.html',
+  '/watch/confirm': 'watch.html',
+  '/watch/stop': 'watch.html',
 };
 
 // The site follows the advice it gives.
@@ -167,6 +174,8 @@ async function serveFile(req, res, relative, { cache = 'no-cache', extra = {}, r
 
 // ------------------------------------------------------------------ API routes
 
+const sha256 = (text) => crypto.createHash('sha256').update(String(text)).digest('hex');
+
 function shapeScan(row) {
   const result = row.result ? JSON.parse(row.result) : null;
   const previous = db.previousScan(row.host, row.id, row.created_at);
@@ -219,7 +228,21 @@ function limitSource(req) {
 
 const api = {
   health(req, res) {
-    sendJson(res, 200, { ok: true, version: config.version });
+    // For uptime monitors: 200 when the app and its database answer, 503 otherwise.
+    let dbOk = true;
+    try {
+      db.stats();
+    } catch {
+      dbOk = false;
+    }
+    sendJson(res, dbOk ? 200 : 503, {
+      ok: dbOk,
+      version: config.version,
+      uptimeSeconds: Math.round(process.uptime()),
+      database: dbOk ? 'ok' : 'error',
+      queued: queueLength(),
+      backup: config.backup.dir ? { lastAt: backup.state.lastAt, error: backup.state.lastError } : null,
+    });
   },
 
   scanner(req, res) {
@@ -229,8 +252,9 @@ const api = {
       userAgent: userAgent(),
       ips: config.publicIps,
       contact: config.contact || null,
-      baseUrl: config.baseUrl,
+      baseUrl: isLocalUrl(config.baseUrl) ? null : config.baseUrl,
       termsVersion: config.termsVersion,
+      watches: { enabled: config.mail.enabled, intervalHours: config.watchIntervalHours, maxPerEmail: config.maxWatchesPerEmail },
       legal: {
         entity: config.legal.entity || null,
         address: config.legal.address || null,
@@ -304,14 +328,52 @@ const api = {
         });
       }
     }
-    const id = startScan(target, { deep, termsVersion: body.terms, allow });
-    sendJson(res, 202, { id, status: 'queued', allow: allow || undefined }, { Location: `/report/${id}` });
+    // The person who starts a scan gets a secret that lets them delete the report. Only its hash is
+    // stored. Someone who merely has the report link can read it but cannot delete it.
+    const deleteToken = crypto.randomBytes(24).toString('hex');
+    const id = startScan(target, { deep, termsVersion: body.terms, allow, deleteHash: sha256(deleteToken) });
+    sendJson(res, 202, { id, status: 'queued', allow: allow || undefined, deleteToken }, { Location: `/report/${id}` });
   },
 
   getScan(req, res, [id]) {
     const row = db.getScan(id);
     if (!row) throw new AppError(404, 'not_found', 'No report with that id. It may have been deleted.');
     sendJson(res, 200, shapeScan(row));
+  },
+
+  async createWatch(req, res) {
+    const hit = watchLimiter.hit(clientIp(req));
+    if (!hit.ok) {
+      throw new AppError(429, 'rate_limited', `Too many sign-ups from your address. Try again in ${Math.ceil(hit.retryAfter / 60)} minutes.`, { retryAfter: hit.retryAfter });
+    }
+    const body = await readJson(req);
+    requireTerms(body.terms);
+    const done = await watch.subscribe({ url: body.url, email: body.email });
+    sendJson(res, 202, { ok: true, host: done.host, message: 'If the proof is in place, a confirmation link is on its way. It works once the address is confirmed.' });
+  },
+
+  async confirmWatch(req, res) {
+    const body = await readJson(req);
+    sendJson(res, 200, watch.confirm(body.id, body.s));
+  },
+
+  async stopWatch(req, res) {
+    const body = await readJson(req);
+    sendJson(res, 200, watch.stop(body.id, body.s));
+  },
+
+  deleteScan(req, res, [id]) {
+    const row = db.getScan(id);
+    if (!row) throw new AppError(404, 'not_found', 'No report with that id. It may already be deleted.');
+    const token = String(req.headers['x-flawradar-delete'] || '');
+    const stored = row.delete_hash || '';
+    const given = sha256(token);
+    const ok = token && stored.length === given.length && crypto.timingSafeEqual(Buffer.from(stored), Buffer.from(given));
+    if (!ok) {
+      throw new AppError(403, 'not_yours', 'Only the browser that started this scan can delete it. Ask the person who ran it, or email the contact on the Privacy page.');
+    }
+    db.deleteScan(id);
+    sendJson(res, 200, { deleted: true });
   },
 
   fix(req, res, [id], url) {
@@ -422,11 +484,15 @@ const routes = [
   ['GET', /^\/api\/checks$/, api.checks],
   ['POST', /^\/api\/scans$/, api.createScan],
   ['GET', new RegExp(`^/api/scans/(${ID})$`), api.getScan],
+  ['DELETE', new RegExp(`^/api/scans/(${ID})$`), api.deleteScan],
   ['GET', new RegExp(`^/api/scans/(${ID})/fix$`), api.fix],
   ['GET', /^\/api\/source\/rules$/, api.sourceRules],
   ['POST', /^\/api\/source$/, api.source],
   ['POST', /^\/api\/source\/zip$/, api.sourceZip],
   ['POST', /^\/api\/cves$/, api.cves],
+  ['POST', /^\/api\/watch$/, api.createWatch],
+  ['POST', /^\/api\/watch\/confirm$/, api.confirmWatch],
+  ['POST', /^\/api\/watch\/stop$/, api.stopWatch],
   ['POST', /^\/api\/verify$/, api.verify],
   ['POST', /^\/api\/verify\/check$/, api.verifyCheck],
 ];
@@ -461,7 +527,7 @@ async function route(req, res) {
   }
   // The source checker runs in the browser. It loads the very same rule files the server uses,
   // so the two cannot drift apart.
-  const engine = pathname.match(/^\/assets\/engine\/(analyze|rules|filechecks|paths|cves)\.js$/);
+  const engine = pathname.match(/^\/assets\/engine\/(analyze|rules|filechecks|paths|cves|flow)\.js$/);
   if (engine) return serveFile(req, res, `${engine[1]}.js`, { root: path.join(config.root, 'server', 'source') });
   if (pathname === '/robots.txt') return serveFile(req, res, 'robots.txt');
   if (pathname.startsWith('/assets/')) {

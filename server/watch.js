@@ -31,7 +31,7 @@ export function normalizeEmail(value) {
 
 export async function subscribe({ url, email, send = sendMail }) {
   if (!config.mail.enabled) {
-    throw new AppError(503, 'watch_unavailable', 'Watches are switched off on this server because it cannot send email.');
+    throw new AppError(503, 'watch_unavailable', 'Watches are not available right now. Please try again later.');
   }
   const address = normalizeEmail(email);
   const target = parseTarget(url);

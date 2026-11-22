@@ -39,7 +39,10 @@
     <p class="actions">
       <button type="button" id="rescan">Scan again</button>
       <a class="button" href="/">Scan another site</a>
+      <button type="button" id="print">Print or save as PDF</button>
+      <a class="button" id="watch-link" href="/watch">Watch this site</a>
     </p>
+    <p id="delete-area" hidden><button type="button" id="delete">Delete this report</button> <small class="muted">You started this scan in this browser, so you can remove it from the server now instead of waiting for the retention period.</small></p>
     <p id="downloads" hidden><b>Fix files for your server:</b> <span id="download-links"></span></p>
 
     <div class="toolbar">
@@ -50,6 +53,7 @@
       <button type="button" data-filter="pass" aria-pressed="false">Passed</button>
     </div>
     <div id="findings" class="findings" data-filter="all"></div>
+    <p class="disclaimer"><small>This report is information, not advice or a guarantee. A good grade does not mean a site cannot be hacked, and the checks can be wrong. Test any change before you apply it. See the <a href="/terms#reports">Terms of Service</a>.</small></p>
     <p class="muted"><small>This report is information only. It covers a limited set of checks at one moment and can contain false positives and misses. A good score does not mean the site is secure. See the <a href="/terms#reports">Terms of Service</a>.</small></p>
   </section>
 </main>
