@@ -716,6 +716,10 @@ export const CHECKS = [
       'A readable .env file usually holds database passwords and API keys.'],
     ['exposed-backup', 'Backups and configuration copies are not exposed', 'critical', 'backup',
       'Database dumps, site archives and copies of config files like wp-config.php.bak are served as plain downloads by most web servers.'],
+    ['exposed-keys', 'Private keys and credential files are not exposed', 'critical', 'keys',
+      'Private keys, .htpasswd, .npmrc and cloud credential files give direct access to servers, packages and accounts.'],
+    ['exposed-admin', 'Admin panels, API docs and actuator endpoints are not public', 'high', 'admin',
+      'Database panels, Spring actuator endpoints and API specifications on a public address hand attackers a map of the system, and sometimes the keys to it.'],
     ['exposed-misc', 'Debug and server status pages are not exposed', 'medium', 'misc',
       'phpinfo(), server-status and .DS_Store files reveal paths, versions and settings that help an attacker.'],
   ].map(([id, title, severity, group, why]) => ({

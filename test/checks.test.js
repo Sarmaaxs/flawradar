@@ -237,6 +237,11 @@ test('deep checks are skipped without ownership proof and report hits with it', 
   const results = evaluate(ctx({ deep }));
   assert.equal(status(results, 'exposed-env'), 'fail');
   assert.equal(status(results, 'exposed-vcs'), 'pass');
+  assert.equal(status(results, 'exposed-keys'), 'pass');
+  assert.equal(status(results, 'exposed-admin'), 'pass');
+  const more = evaluate(ctx({ deep: { hits: [{ group: 'keys', path: '/.npmrc', status: 200 }, { group: 'admin', path: '/actuator/env', status: 200 }], listings: [], allow: null } }));
+  assert.equal(status(more, 'exposed-keys'), 'fail');
+  assert.equal(status(more, 'exposed-admin'), 'fail');
   assert.equal(status(results, 'dir-listing'), 'fail');
   assert.equal(status(results, 'http-methods'), 'fail');
 });

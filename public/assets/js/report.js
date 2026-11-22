@@ -1,4 +1,5 @@
 import { codeTabs } from './components.js';
+import { crossfade, stagger } from './motion.js';
 import { api, deleteTokenFor, forgetDeleteToken, formatDate, h, rememberDeleteToken, rememberedTerms, safeHttpsUrl, scannerInfo } from './dom.js';
 
 const id = location.pathname.split('/').pop();
@@ -23,9 +24,12 @@ function showProblem(title, ...body) {
 }
 
 function renderSteps(progress) {
+  // The meter moves in whole steps: done steps count fully, the running one counts half.
+  const done = progress.filter((s) => s.state === 'done').length + progress.filter((s) => s.state === 'running').length / 2;
+  $('#progress').style.setProperty('--p', String(progress.length ? Math.min(1, done / progress.length) : 0));
   $('#steps').replaceChildren(
     ...progress.map((s) =>
-      h('li', {}, { running: '[ .. ]', done: '[ ok ]', failed: '[fail]' }[s.state] || '[    ]', ' ', s.name),
+      h('li', { class: s.state }, { running: '[ .. ]', done: '[ ok ]', failed: '[fail]' }[s.state] || '[    ]', ' ', s.name),
     ),
   );
 }
@@ -117,6 +121,7 @@ function renderResult(s) {
     );
     container.append(h('h2', {}, category), ...list.map(findingNode));
   }
+  stagger([...container.querySelectorAll('.finding')], 12);
 
   const bundles = ['nginx', 'apache', 'express'].filter((server) =>
     r.findings.some((f) => (f.status === 'fail' || f.status === 'warn') && f.fix?.bundle?.includes(server)),
@@ -200,7 +205,7 @@ $('#delete').addEventListener('click', async (event) => {
 document.querySelectorAll('.toolbar [data-filter]').forEach((b) => {
   b.addEventListener('click', () => {
     document.querySelectorAll('.toolbar [data-filter]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-    $('#findings').dataset.filter = b.dataset.filter;
+    crossfade($('#findings'), () => { $('#findings').dataset.filter = b.dataset.filter; });
   });
 });
 

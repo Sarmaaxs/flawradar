@@ -1,6 +1,7 @@
 // Small set of custom elements used across the pages.
 // All of them render into the page itself (no shadow DOM) so the stylesheet applies.
 
+import { countUp, stagger } from './motion.js';
 import { h } from './dom.js';
 
 const NAV = [
@@ -80,13 +81,16 @@ class WScore extends HTMLElement {
   render() {
     const score = Math.max(0, Math.min(100, Number(this.getAttribute('score')) || 0));
     const fill = h('i');
-    fill.style.width = `${score}%`;
+    fill.style.setProperty('--fill', String(score / 100));
+    const points = h('span', { class: 'points' }, `${score} out of 100`);
+    this._stop?.();
+    this._stop = countUp((n) => { points.textContent = `${n} out of 100`; }, score, 900);
     this.replaceChildren(
       h(
         'div',
         { class: 'scorebox' },
         h('span', { class: 'grade' }, this.getAttribute('grade') || '?'),
-        h('span', { class: 'points' }, `${score} out of 100`),
+        points,
         h('div', { class: 'bar', role: 'img', 'aria-label': `Score ${score} out of 100` }, fill),
       ),
     );
@@ -113,7 +117,11 @@ class WCopy extends HTMLElement {
         sel.removeAllRanges();
       }
       button.textContent = 'Copied';
-      setTimeout(() => { button.textContent = 'Copy'; }, 1500);
+      button.classList.add('copied');
+      setTimeout(() => {
+        button.textContent = 'Copy';
+        button.classList.remove('copied');
+      }, 1500);
     });
     const pre = h('pre', {}, code);
     const label = this.getAttribute('label');
@@ -191,6 +199,8 @@ class WDropzone extends HTMLElement {
       });
       return input;
     };
+    const fileList = h('ul', { class: 'dropzone-files', 'aria-live': 'polite', hidden: true });
+    this._fileList = fileList;
     const filesInput = pick({ multiple: true, id: 'pick-files' });
     const folderInput = pick({ webkitdirectory: true, id: 'pick-folder' });
 
@@ -243,10 +253,17 @@ class WDropzone extends HTMLElement {
       this.emit(out, skipped);
     });
 
-    this.replaceChildren(box, buttons, filesInput, folderInput);
+    this.replaceChildren(box, buttons, fileList, filesInput, folderInput);
   }
 
   emit(files, skippedDirs) {
+    if (this._fileList) {
+      const shown = files.slice(0, 8).map(({ path }) => h('li', {}, path));
+      if (files.length > 8) shown.push(h('li', {}, `and ${files.length - 8} more`));
+      this._fileList.replaceChildren(...shown);
+      this._fileList.hidden = files.length === 0;
+      stagger(shown);
+    }
     this.dispatchEvent(new CustomEvent('w-files', { detail: { files, skippedDirs: [...skippedDirs] } }));
   }
 }

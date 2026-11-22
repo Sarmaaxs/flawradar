@@ -1,6 +1,7 @@
 import './components.js';
 import { analyzeFiles, ruleCatalog } from '/assets/engine/analyze.js';
 import { MANIFEST_FOR_CVE, skippedDir, skipReason } from '/assets/engine/paths.js';
+import { crossfade, stagger } from './motion.js';
 import { api, h, forgetTerms, rememberTerms, rememberedTerms, scannerInfo } from './dom.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -189,6 +190,7 @@ function render(r) {
   } else {
     list.replaceChildren(...r.findings.map(findingNode));
   }
+  stagger([...list.querySelectorAll('.finding')], 12);
   list.dataset.filter = 'all';
   document.querySelectorAll('.toolbar [data-filter]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.filter === 'all')));
   $('#result').hidden = false;
@@ -198,7 +200,7 @@ function render(r) {
 document.querySelectorAll('.toolbar [data-filter]').forEach((b) => {
   b.addEventListener('click', () => {
     document.querySelectorAll('.toolbar [data-filter]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-    $('#findings').dataset.filter = b.dataset.filter;
+    crossfade($('#findings'), () => { $('#findings').dataset.filter = b.dataset.filter; });
   });
 });
 
