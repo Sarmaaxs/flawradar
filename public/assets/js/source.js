@@ -144,40 +144,27 @@ async function local(files, skippedDirs) {
 }
 
 function findingNode(f) {
-  const body = h(
-    'div',
-    { class: 'body' },
-    h('p', { class: 'where' }, `${f.file}:${f.line}`),
+  if (f.cve) {
+    const params = new URLSearchParams({ id: f.cve, package: f.package || '', version: f.version || '', ecosystem: f.ecosystem || '', severity: f.severity || 'unknown', file: f.file || '', line: String(f.line || 1), summary: f.why || '', fix: f.fix || '', details: f.advisoryDetails || '', refs: JSON.stringify(f.advisoryReferences || []), ranges: JSON.stringify(f.affectedRanges || []) });
+    return h('article', { class: 'finding cve-finding', 'data-severity': f.severity },
+      h('a', { class: 'cve-finding-link', href: '/cve?' + params.toString() },
+        h('w-status', { value: COLOUR[f.severity], label: f.severity }),
+        h('span', {}, h('span', { class: 'title' }, f.title),
+          h('span', { class: 'conf' }, 'OSV dependency match · high confidence'),
+          h('span', { class: 'brief where' }, f.file + ':' + f.line),
+          h('span', { class: 'cve-open' }, 'Open vulnerability analysis →'))));
+  }
+  const body = h('div', { class: 'body' },
+    h('p', { class: 'where' }, f.file + ':' + f.line),
     h('pre', { class: 'snippet' }, f.snippet),
     h('p', {}, h('b', {}, 'Why it matters. '), f.why),
-    ...(f.cve ? [
-      h('section', { class: 'cve-brief' },
-        h('h3', {}, 'CVE triage brief'),
-        h('p', {}, h('b', {}, 'What was detected. '), `${f.cve} is associated with ${f.ecosystem || 'a dependency'} package ${f.package || ''} version ${f.version || ''}. The match comes from the dependency version lookup; it does not by itself prove that your application is exploitable.`),
-        h('p', {}, h('b', {}, 'How this could affect an application. '), 'If the vulnerable package is loaded in a reachable feature and the affected code path is used, an attacker may be able to trigger the weakness through that feature. The actual impact depends on the advisory, package usage, configuration and exposure.'),
-        h('p', {}, h('b', {}, 'Pentest validation path. '), 'Confirm the exact installed version from the lockfile, read the linked vendor or OSV advisory, check whether the affected component is enabled and reachable, then validate only in an isolated staging environment you are authorized to test. Record evidence without accessing real user data or disrupting production.'),
-        h('p', {}, h('b', {}, 'Priority. '), 'Treat internet-facing, actively used affected components as higher priority. Check the fixed version and any vendor mitigation before changing production.'),
-      )
-    ] : []),
-    h('p', {}, h('b', {}, 'How to fix. '), f.fix),
-  );
-  return h(
-    'details',
-    { class: 'finding', 'data-severity': f.severity, open: f.severity === 'critical' },
-    h(
-      'summary',
-      {},
-      h('w-status', { value: COLOUR[f.severity], label: f.severity }),
-      h(
-        'span',
-        {},
-        h('span', { class: 'title' }, f.title),
-        h('span', { class: 'conf' }, `${f.confidence} confidence`),
-        h('span', { class: 'brief where' }, `${f.file}:${f.line}`),
-      ),
-    ),
-    body,
-  );
+    h('p', {}, h('b', {}, 'How to fix. '), f.fix));
+  return h('details', { class: 'finding', 'data-severity': f.severity, open: f.severity === 'critical' },
+    h('summary', {}, h('w-status', { value: COLOUR[f.severity], label: f.severity }),
+      h('span', {}, h('span', { class: 'title' }, f.title),
+        h('span', { class: 'conf' }, f.confidence + ' confidence'),
+        h('span', { class: 'brief where' }, f.file + ':' + f.line))),
+    body);
 }
 
 function render(r) {

@@ -383,6 +383,9 @@ function vulnToFinding(pkg, vuln) {
     package: pkg.name,
     version: pkg.version,
     ecosystem: pkg.ecosystem,
+    advisoryDetails: String(vuln.details || '').slice(0, 1800),
+    advisoryReferences: (vuln.references || []).filter((r) => r && /^https:\/\//i.test(r.url || '')).slice(0, 4).map((r) => ({ type: String(r.type || 'WEB').slice(0, 20), url: r.url })),
+    affectedRanges: (vuln.affected || []).filter((a) => a.package?.name === pkg.name && a.package?.ecosystem === pkg.ecosystem).flatMap((a) => (a.ranges || []).map((r) => ({ type: r.type, events: (r.events || []).slice(0, 20) }))).slice(0, 4),
   };
 }
 

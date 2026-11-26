@@ -42,6 +42,7 @@ const PAGES = {
   '/verify': 'verify.html',
   '/checks': 'checks.html',
   '/source': 'source.html',
+  '/cve': 'cve.html',
   '/about': 'about.html',
   '/terms': 'terms.html',
   '/acceptable-use': 'acceptable-use.html',
