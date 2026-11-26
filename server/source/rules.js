@@ -8,6 +8,7 @@
 const JS = ['js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs', 'vue', 'svelte'];
 const PY = ['py'];
 const PHP = ['php', 'phtml', 'inc'];
+const JAVA = ['java'];
 const MARKUP = ['html', 'htm', 'ejs', 'hbs', 'twig', 'php', 'phtml', 'vue', 'svelte'];
 
 const SQL = '(?:SELECT\\b[^"\'`]*?\\bFROM|INSERT\\s+INTO|UPDATE\\s+\\w+\\s+SET|DELETE\\s+FROM)';
@@ -375,6 +376,34 @@ export const RULES = [
     pattern: /origin\s*:\s*["']\*["']|Access-Control-Allow-Origin["']?\s*[,:]?\s*["']?\*/i,
     why: 'Any website can read responses from this endpoint. Harmless for public data, a problem for anything tied to a login.',
     fix: 'Allow a fixed list of origins instead of *. Never combine a wildcard or reflected origin with credentials.',
+  },
+
+  // ---------------------------------------------------------------------- Java
+  {
+    id: 'java-unsafe-deserialization', title: 'Java native object deserialization', severity: 'high', confidence: 'medium', exts: JAVA,
+    pattern: /\.readObject\s*\(/,
+    why: 'Java native deserialization can instantiate unexpected classes when the input is not trusted. This is especially risky when data comes from outside the application.',
+    fix: 'Avoid native Java deserialization for untrusted data. Prefer a data-only format and validate the expected structure; if unavoidable, apply a strict ObjectInputFilter allow-list.',
+  },
+  {
+    id: 'java-sql-concat', title: 'SQL statement built with string concatenation', severity: 'high', confidence: 'medium', exts: JAVA,
+    pattern: /\b(?:Statement|createStatement)\b[^;\n]*|\.execute(?:Query|Update)?\s*\([^;\n]*\+/,
+    filter: (line) => /\.execute(?:Query|Update)?\s*\([^;\n]*\+/.test(line) || /\bStatement\b[^;\n]*\+/.test(line),
+    why: 'Building SQL text by joining values can let input change the query (SQL injection).',
+    fix: 'Use PreparedStatement with ? placeholders and bind each value with setString, setInt or the matching setter.',
+  },
+  {
+    id: 'java-weak-hash', title: 'Weak digest algorithm selected', severity: 'medium', confidence: 'high', exts: JAVA,
+    pattern: /MessageDigest\.getInstance\s*\(\s*["'](?:MD5|SHA-?1)["']/i,
+    why: 'MD5 and SHA-1 are no longer suitable for security-sensitive hashing or signatures.',
+    fix: 'Use SHA-256 or stronger for integrity. For passwords, use a dedicated password-hashing algorithm such as Argon2id, scrypt or bcrypt.',
+  },
+  {
+    id: 'java-predictable-random', title: 'Predictable random generator used for a security value', severity: 'medium', confidence: 'medium', exts: JAVA,
+    pattern: /new\s+Random\s*\(/,
+    filter: (line) => /token|secret|password|nonce|session|otp|auth|key/i.test(line),
+    why: 'java.util.Random is predictable and should not generate authentication tokens, reset links or other security values.',
+    fix: 'Use java.security.SecureRandom for security-sensitive random values.',
   },
 ];
 

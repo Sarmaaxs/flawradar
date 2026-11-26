@@ -1,6 +1,8 @@
 # FlawRadar
 
-A web security checker for developers developed by Sarem Menur. Enter a website address and FlawRadar reports on its TLS setup, response headers, cookies, DNS records and a few well-known files, then gives you the configuration to fix what it found. It scans from fixed IP addresses that it publishes, so you can allow-list them in a firewall or WAF.
+A web security and domain-research platform developed by Sarem Menur. Its baseline scanner evaluates TLS, HTTP security headers, cookies, DNS configuration and exposed files, then provides remediation guidance. Its owner-verified intelligence workflow builds an evidence-linked domain graph, correlates observed technology/version data with public vulnerability intelligence, and can collect a bounded UDP traceroute with route metrics. Source analysis runs server-side and reports code-level security findings. FlawRadar is designed for authorized defensive assessment; it does not exploit targets or bypass access controls.
+
+> **Research update — 27 November 2026:** Domain intelligence now includes bounded network-path diagnostics (`server/scanner/route.js`) and an explainable CVSS/EPSS/KEV prioritization model (`server/scanner/risk.js`). The intelligence page displays route hops and RTT summaries, while CVE findings expose priority contributions and confidence. These additions run inside the existing ownership-verification and rate-limit controls. See [Domain intelligence and researcher evidence](#domain-intelligence-and-researcher-evidence) for methodology and limitations.
 
 - 29 checks in 7 groups, each with an explanation and a fix for nginx, Apache or Express where one applies
 - Bounded multi-page crawl (home + a few same-origin paths) so security headers only set on other routes are not missed
@@ -9,8 +11,8 @@ A web security checker for developers developed by Sarem Menur. Enter a website 
 - Optional **allow record** (`flawradar-allow=1` as DNS TXT at `_flawradar.<host>` or a file at `/.well-known/flawradar-allow.txt`) raises the per-host rate limit so owners who want scans are not treated as noise
 - Reports with a score, grade, history against the previous scan, and downloadable server config
 - Source code check: drop a folder, files or a .zip on `/source` and line rules plus file checks look for hard-coded secrets, SQL injection, XSS, shell injection, weak crypto, turned-off TLS checks and risky config. Known dependency CVEs are looked up via OSV when a lockfile is present. The source engine runs server-side: selected files are uploaded over HTTPS and analyzed in memory, while raw source contents are not intentionally persisted. Detection rules are not shipped as browser assets. The `/api/source` endpoints are used by the hosted page and local deployments.
-- Domain intelligence at `/intel`: an owner-verified relationship map of public DNS, certificate names, subdomains, public pages, endpoint references, technologies and version-linked advisories
-- No dependencies. Node's standard library and its built-in SQLite module
+- Domain intelligence at `/intel`: an owner-verified relationship map of public DNS, certificate names, subdomains, public pages, endpoint references, technologies and version-linked advisories; includes a bounded UDP traceroute and transparent CVSS/EPSS/KEV priority heuristic
+- No npm dependencies. Node's standard library and built-in SQLite module; the optional route diagnostic uses the system `traceroute` utility when installed.
 
 ## Requirements
 
@@ -91,7 +93,40 @@ A visitor who has [proved control of a site](/verify) can ask for a watch: FlawR
 - `FLAWRADAR_BACKUP_DIR` turns on copies of the database (SQLite `VACUUM INTO`, safe while running), `FLAWRADAR_BACKUP_KEEP` of them are kept. `npm run backup` makes one now. `/api/health` returns 503 when the database does not answer and shows the time of the last backup, so an uptime monitor can watch it.
 - `.github/workflows/test.yml` runs the tests on every push.
 
-### Safety of the scanner itself
+#
+## How it works
+
+```
+server/
+  app.js              HTTP routes, ownership gates, rate limits and response policy
+  scans.js            scan queue, concurrency and report lifecycle
+  verify.js           DNS/file ownership proof for deep and intelligence work
+  db.js               SQLite reports and public advisory cache
+  watch.js / mail.js  scheduled rescans and email notifications
+  scanner/
+    net.js            target validation, public-IP checks and DNS pinning
+    fetcher.js        bounded HTTP client with redirect revalidation
+    scan.js           baseline crawl, page evidence and robots/sitemap handling
+    checks.js         security checks and remediation guidance
+    tls.js            TLS handshake and certificate diagnostics
+    dnsinfo.js        DNS security and mail-policy lookups
+    intelligence.js   asset graph, technology fingerprinting and CVE correlation
+    route.js          bounded UDP traceroute parser and route metrics
+    risk.js           explainable CVSS/EPSS/KEV priority calculation
+    score.js          baseline grade and severity caps
+  source/
+    rules.js          line-oriented source checks
+    flow.js           same-file request-data tracking for supported languages
+    analyze.js        upload processing, evidence redaction and finding aggregation
+    cves.js            dependency advisory lookups and threat-intelligence enrichment
+    zip.js             bounded in-memory ZIP reader
+public/                HTML, CSS and browser-side presentation
+ test/                 unit and integration tests
+```
+
+The source checker is a static-analysis aid, not a compiler, full AST engine or complete taint analyzer. Its current flow pass follows selected request-derived values inside individual files; it does not yet perform cross-file interprocedural data-flow or prove authorization logic. Treat findings as evidence to review, and combine the results with code review and CI security tools.
+
+## Safety of the scanner itself
 
 A tool that makes requests to addresses chosen by strangers can be turned against its own host. FlawRadar handles that in several places:
 
@@ -116,7 +151,7 @@ The web interface is built without `innerHTML`, and the site serves a strict Con
 | `POST /api/verify/check` | Checks whether the proof is in place |
 | `POST /api/source` | Body `{"files": [{"path": "src/a.js", "content": "..."}]}`. Returns findings, nothing stored |
 | `POST /api/source/zip` | Body is the raw .zip, `Content-Type: application/zip` |
-| `POST /api/intelligence` | Owner-verified domain relationship map and security findings |
+| `POST /api/intelligence` | Owner-verified domain relationship map, network path diagnostics and security findings |
 | `POST /api/watch` | Body `{"url", "email", "terms"}`. Starts a watch; a confirmation link is emailed |
 | `DELETE /api/scans/:id` | Header `X-FlawRadar-Delete` with the secret returned when the scan was created |
 | `GET /api/scanner` | Published scanner addresses, terms version and required public legal metadata |
@@ -128,9 +163,13 @@ The source checker analyzes selected files on the server after upload over HTTPS
 
 Uploads are bounded by file count, per-file size, total text size and ZIP expansion limits. Generated files and common dependency folders are skipped. Do not upload code you are not authorized to share with the service.
 
-## Domain intelligence
+## Domain intelligence and researcher evidence
 
-The `/intel` page requires proof of control through DNS TXT or a well-known file. It maps the submitted host using public DNS, Certificate Transparency, a public web archive, robots.txt and sitemap metadata, same-origin pages, forms and statically referenced API paths. It fingerprints visible technologies and correlates exact version evidence with OSV or NVD advisories. CVEs are enriched with CVSS, EPSS and CISA KEV context when available.
+The `/intel` page requires proof of control through DNS TXT or a well-known file before any investigation begins. It combines public DNS (A/AAAA, MX, NS, TXT, SPF, DMARC, CAA, DS/DNSSEC and CNAME), TLS certificate details and SANs, Certificate Transparency, Common Crawl history, robots.txt and sitemap metadata, same-origin pages, form field names, statically referenced API paths and visible technology fingerprints. Every graph relationship carries a source and confidence level so a researcher can distinguish direct observations from historical or inferred leads.
+
+The verified host also receives a bounded UDP traceroute to its resolved public IP: at most 12 hops and one probe per hop, with numeric hop addresses, RTT samples, response rate, mean RTT, min/max RTT and mean absolute RTT variation. This is network-path diagnostics, not port scanning. Routers may filter or rate-limit probes; a missing hop is not evidence of a vulnerable or unavailable system. Traceroute is skipped when the worker does not have the system utility installed.
+
+Exact product/version evidence is correlated with OSV and supported NVD CPE advisories. CVEs are enriched with CVSS, EPSS and CISA KEV context when those feeds respond. FlawRadar adds a separate, explainable priority heuristic: **40% CVSS + 30% EPSS + 20% CISA KEV + 10% public exposure**, with missing signals omitted and the remaining weights renormalised. A confidence factor (high 1.00, medium 0.85, low 0.65) adjusts the result. This is a triage score, not a probability of compromise and not a replacement for CVSS or analyst judgement.
 
 Discovered subdomains are shown as relationships and are DNS-resolved only; the service does not automatically send HTTP requests to every discovered subdomain. The page inventory prioritizes linked, sitemap-listed and common authentication or administration entry points, while respecting robots.txt exclusions. It does not submit forms, attempt logins, brute-force paths, bypass access controls or run exploits. A historical URL, robots entry or possible dangling CNAME is a lead for an authorized owner to verify, not proof of a current vulnerability.
 

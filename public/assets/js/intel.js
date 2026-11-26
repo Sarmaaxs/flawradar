@@ -84,6 +84,9 @@ function showResults(data) {
   $('#metric-tech').textContent = data.summary.technologies;
   $('#metric-cves').textContent = data.summary.vulnerabilities;
   $('#metric-critical').textContent = data.summary.critical;
+  $('#metric-priority').textContent = data.summary.highestPriority ? `${data.summary.highestPriority}/100` : '—';
+  $('#intel-risk-note').textContent = data.riskModel?.description || 'Priority scores are supplementary triage estimates; review the underlying evidence.';
+  renderNetworkPath(data.networkPath);
   const types = Array.from(new Set(data.nodes.map((n) => n.type))).sort();
   $('#intel-type').replaceChildren(new Option('All asset types', 'all'), ...types.map((t) => new Option(t.replaceAll('-', ' '), t)));
   const legend = $('#intel-legend'); legend.replaceChildren();
@@ -94,6 +97,25 @@ function showResults(data) {
   (data.notices || []).forEach((n) => notices.append(el('p', n, 'intel-notice')));
   $('#intel-proof-status').textContent = 'Investigation complete.';
   $('#intel-results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderNetworkPath(path) {
+  const summary = $('#intel-path-summary');
+  const list = $('#intel-path-hops');
+  list.replaceChildren();
+  if (!path || !Array.isArray(path.hops) || !path.hops.length) {
+    summary.textContent = path?.notice || 'No route data was returned by this worker.';
+    return;
+  }
+  const metrics = path.metrics || {};
+  summary.textContent = `${path.destination} · ${metrics.hopsObserved ?? path.hops.length} hops · ${metrics.destinationReached ? 'destination reached' : 'destination not confirmed'} · mean RTT ${metrics.meanRttMs == null ? 'n/a' : metrics.meanRttMs + ' ms'} · response rate ${metrics.responseRatePercent ?? 0}%`;
+  for (const hop of path.hops) {
+    const item = document.createElement('li');
+    const address = hop.addresses?.length ? hop.addresses.join(', ') : 'No response';
+    const rtt = hop.rttsMs?.length ? hop.rttsMs.map((value) => `${value} ms`).join(' / ') : 'timeout';
+    item.textContent = `Hop ${hop.ttl} · ${address} · ${rtt} · ${hop.lossPercent}% probe loss`;
+    list.append(item);
+  }
 }
 
 function positionsFor(nodes, edges) {
@@ -215,12 +237,21 @@ function selectNode(item) {
 function renderFindings() {
   const list = $('#intel-findings-list'); list.replaceChildren();
   const order = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
-  const findings = state.data.nodes.filter((n) => n.type === 'finding' || n.type === 'cve').sort((a, b) => order[a.severity] - order[b.severity]);
+  const findings = state.data.nodes.filter((n) => n.type === 'finding' || n.type === 'cve').sort((a, b) => {
+    const ap = a.meta?.priority?.score; const bp = b.meta?.priority?.score;
+    if (ap != null || bp != null) return (bp ?? -1) - (ap ?? -1);
+    return order[a.severity] - order[b.severity];
+  });
   if (!findings.length) { list.append(el('p', 'No baseline findings or version-specific CVEs were identified. This is not proof of security.', 'intel-empty')); return; }
   findings.forEach((item) => {
     const card = h('article', { class: 'intel-finding severity-' + item.severity });
     card.append(h('div', { class: 'intel-finding-head' }, h('strong', {}, item.label), h('span', { class: 'severity-label severity-' + item.severity }, item.severity.toUpperCase())));
     card.append(el('p', item.detail));
+    if (item.type === 'cve' && item.meta?.priority?.score != null) {
+      const parts = item.meta.priority.components.map((part) => `${part.name} ${part.value}`).join(' · ');
+      card.append(el('p', `FlawRadar priority: ${item.meta.priority.score}/100 · ${item.meta.priority.band.toUpperCase()} (heuristic, not a probability)`, 'intel-priority'));
+      if (parts) card.append(el('p', `Score inputs: ${parts}`, 'muted'));
+    }
     const locate = h('button', { type: 'button', class: 'small secondary' }, 'Locate in map');
     locate.addEventListener('click', () => {
       $('#intel-search').value = item.label; $('#intel-type').value = 'all'; $('#intel-severity').value = 'all';

@@ -141,6 +141,15 @@ test('PHP rules', async () => {
   await assertClean('a.php', '$this->eval($code);', 'php-eval');
 });
 
+test('Java security rules', async () => {
+  await assertFlags('App.java', 'Object value = input.readObject();', 'java-unsafe-deserialization');
+  await assertFlags('App.java', 'statement.executeQuery("SELECT * FROM users WHERE id = " + id);', 'java-sql-concat');
+  await assertClean('App.java', 'PreparedStatement ps = db.prepareStatement("SELECT * FROM users WHERE id = ?");', 'java-sql-concat');
+  await assertFlags('App.java', 'MessageDigest.getInstance("SHA-1");', 'java-weak-hash');
+  await assertFlags('App.java', 'String token = new Random().nextInt() + "";', 'java-predictable-random');
+  await assertClean('App.java', 'SecureRandom tokenGenerator = new SecureRandom();', 'java-predictable-random');
+});
+
 test('markup and config rules', async () => {
   await assertFlags('a.html', '<script src="http://cdn.example.net/a.js"></script>', 'html-http-script');
   await assertFlags('a.html', '<form action="http://example.com/login" method="post">', 'html-form-http');

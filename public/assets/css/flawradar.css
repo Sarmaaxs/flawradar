@@ -486,18 +486,18 @@ a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visibl
   .pre { opacity: 1 !important; transform: none !important; }
 }
 
-/* Muted spoken-language marquee. Hover does not alter playback. */
-.language-ticker { margin: 1.2rem 0 1.8rem; overflow: hidden; }
-.ticker-window { overflow: hidden; white-space: nowrap; }
-.ticker-track { display: flex; width: max-content; gap: 2.2rem; padding: .55rem 0; color: #929292; font: 700 .9rem/1.4 var(--mono); letter-spacing: .13em; }
-.ticker-track span { flex: 0 0 auto; }
-@media (prefers-reduced-motion: no-preference) { .ticker-track { animation: language-marquee 64s linear infinite; } }
-@keyframes language-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-.language-index-wrap { display:flex; justify-content:flex-end; margin:.5rem 0; }
-.language-index { position:relative; z-index:2; }
-.language-index summary { list-style:none; }
-.language-index summary::-webkit-details-marker { display:none; }
-.language-index-list { position:absolute; right:0; top:calc(100% + .3rem); width:min(32rem, calc(100vw - 3rem)); max-height:18rem; overflow:auto; padding:.8rem; border:1px solid var(--rule); background:#fff; box-shadow:0 4px 14px #0002; font: .8rem/1.8 var(--mono); }
+/* Programming-language coverage beside the animated radar graphic. */
+.language-stack { display:grid; grid-template-columns:minmax(170px,.8fr) minmax(0,1.2fr); gap:1.5rem; align-items:center; margin:2.5rem 0; padding:1.4rem; border:1px solid var(--rule); background:#f1efe9; }
+.language-stack-animation { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem; min-height:100%; }
+.language-stack-animation .radar { width:min(100%,250px); aspect-ratio:1; height:auto; }
+.language-stack-animation .eyebrow { text-align:center; font:.68rem var(--mono); letter-spacing:.12em; }
+.language-stack-content h2 { margin:.2rem 0 .5rem; }
+.language-stack-content > p { color:var(--muted); }
+.language-stack-content > .eyebrow { font:.72rem var(--mono); letter-spacing:.12em; }
+.language-stack-list { display:flex; flex-direction:column; gap:0; list-style:none; padding:0; margin:1rem 0; border-top:1px solid var(--rule); }
+.language-stack-list li { padding:.34rem .55rem; border-bottom:1px solid var(--rule); font:.86rem var(--mono); }
+.language-stack-list li::before { content:"// "; color:var(--muted); }
+@media (max-width:700px) { .language-stack { grid-template-columns:1fr; } .language-stack-animation .radar { width:150px; } }
 .cve-open { display: inline-block; margin-top: .75rem; padding: .4rem .7rem; border: 2px outset #f6f6f6; background: var(--grey); color: var(--ink); font: .85rem var(--sans); text-decoration: none; }
 .cve-open:hover { background: #e2dfd8; }
 .cve-page { max-width: 54rem; }
@@ -545,8 +545,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visibl
 .intel-empty { padding:2rem 1rem; text-align:center; border:1px dashed var(--rule); background:#fff; }
 @media (max-width:760px) { .cve-layout { grid-template-columns:1fr; } .cve-sidebar { position:static; display:flex; flex-wrap:wrap; } .cve-sidebar a { border-left:0; border-bottom:2px solid transparent; } .cve-sidebar a:hover { border-bottom-color:var(--ink); } }
 
-/* Spoken-language marquee continues at the same speed while hovered. */
-.language-ticker[aria-label="Spoken languages"] .ticker-track { animation-duration: 92s; }
 .intel-start { margin:1.5rem 0; padding:1rem; border:1px solid var(--rule); background:#f1efe9; }
 .intel-proof { margin-top:1rem; padding:1rem; border:1px solid var(--rule); background:#fff; }
 .intel-proof-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
@@ -608,3 +606,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visibl
 #intel-graph { cursor: grab; touch-action:none; }
 
 :focus-visible { outline:2px solid var(--ink); outline-offset:3px; }
+
+.intel-path-panel { margin:1rem 0; padding:1rem; border:1px solid var(--rule); background:#f8f7f3; }
+.intel-path-panel h3 { margin:.1rem 0 .4rem; }
+.intel-path-hops { display:grid; grid-template-columns:repeat(auto-fit,minmax(15rem,1fr)); gap:.4rem 1.2rem; padding-left:1.4rem; font:.78rem var(--mono); }
+.intel-path-hops li { padding:.35rem; border-bottom:1px solid var(--rule); overflow-wrap:anywhere; }
+.intel-priority { font:600 .8rem var(--mono); }
+.legend-dot.type-network-hop, .legend-dot.type-network-path { background:#d9e7e2; border-color:#47786a; }

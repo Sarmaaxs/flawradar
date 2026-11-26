@@ -17,6 +17,7 @@ import { lookupCves } from './source/cves.js';
 import { readZip } from './source/zip.js';
 import { runScan } from './scanner/scan.js';
 import { runDomainIntelligence } from './scanner/intelligence.js';
+import { traceVerifiedHost } from './scanner/route.js';
 
 const PUBLIC = path.join(config.root, 'public');
 const ID = '[a-f0-9]{24}';
@@ -268,12 +269,15 @@ const api = {
     }
     const pageEvidence = [];
     let robotsInfo = null;
-    const baseline = await runScan(target, {
-      deep: false,
-      onPage: (page) => pageEvidence.push(page),
-      onRobots: (info) => { robotsInfo = info; },
-    });
-    const result = await runDomainIntelligence(target, { baseScan: baseline, pages: pageEvidence, robotsInfo });
+    const [baseline, networkPath] = await Promise.all([
+      runScan(target, {
+        deep: false,
+        onPage: (page) => pageEvidence.push(page),
+        onRobots: (info) => { robotsInfo = info; },
+      }),
+      traceVerifiedHost(target.host),
+    ]);
+    const result = await runDomainIntelligence(target, { baseScan: baseline, pages: pageEvidence, robotsInfo, networkPath });
     db.storeCveIntel(result.cveFindings || []);
     delete result.cveFindings;
     sendJson(res, 200, result);

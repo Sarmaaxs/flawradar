@@ -32,11 +32,11 @@
       </fieldset>
     </form>
     <section id="intel-proof" class="intel-proof" hidden>
-      <h2>Verify domain control</h2>
-      <p>Place this token in a DNS TXT record or a file on the exact hostname. This prevents someone from using FlawRadar to actively map a domain they do not control.</p>
+      <h2>Step 1 — verify domain control</h2>
+      <p>Choose either proof method below. Add the exact token to DNS or serve it as a file on the exact hostname. Then press Check verification. FlawRadar will not begin the investigation until it finds the token. DNS changes may take time to propagate.</p>
       <div class="intel-proof-grid">
-        <div><h3>DNS TXT record</h3><p>Name</p><code id="intel-dns-name"></code><p>Value</p><w-copy id="intel-dns-value"></w-copy></div>
-        <div><h3>Verification file</h3><p>Path</p><code id="intel-file-path"></code><p>Contents</p><w-copy id="intel-file-value"></w-copy></div>
+        <div><h3>Option A — DNS TXT record</h3><p>Name</p><code id="intel-dns-name"></code><p>Value</p><w-copy id="intel-dns-value"></w-copy></div>
+        <div><h3>Option B — verification file</h3><p>Path</p><code id="intel-file-path"></code><p>Contents</p><w-copy id="intel-file-value"></w-copy></div>
       </div>
       <div class="intel-tools"><button id="intel-check-proof" type="button">Check verification</button><span id="intel-proof-status" role="status" class="muted"></span></div>
     </section>
@@ -54,7 +54,13 @@
       <div class="intel-metric"><b>Technologies</b><span id="metric-tech">0</span></div>
       <div class="intel-metric"><b>Known CVEs</b><span id="metric-cves">0</span></div>
       <div class="intel-metric"><b>Critical findings</b><span id="metric-critical">0</span></div>
+      <div class="intel-metric"><b>Highest CVE priority</b><span id="metric-priority">—</span></div>
     </div>
+    <section class="intel-path-panel" aria-labelledby="intel-path-title">
+      <div><h3 id="intel-path-title">Network route</h3><p id="intel-path-summary" class="muted">No route data available.</p></div>
+      <ol id="intel-path-hops" class="intel-path-hops"></ol>
+      <small>Low-volume UDP traceroute to the verified hostname's resolved public IP. Routers may suppress probes; missing hops are not proof of a fault. RTT is diagnostic, not a security rating.</small>
+    </section>
     <div class="intel-workspace">
       <aside class="intel-inspector">
         <h3>Investigation</h3>
@@ -76,6 +82,7 @@
     </div>
     <section class="intel-findings">
       <h2>Security findings</h2>
+      <p id="intel-risk-note" class="muted"></p>
       <div id="intel-findings-list"></div>
     </section>
   </section>

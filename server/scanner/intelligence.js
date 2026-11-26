@@ -5,6 +5,7 @@ import { registrableDomain, lookupDns, makeResolver } from './dnsinfo.js';
 import { probeTls } from './tls.js';
 import { extractResources } from './html.js';
 import { lookupCves, intelligenceSignals } from '../source/cves.js';
+import { calculateRiskPriority } from './risk.js';
 
 const CT_URL = 'https://crt.sh/';
 const CC_INFO_URL = 'https://index.commoncrawl.org/collinfo.json';
@@ -418,7 +419,7 @@ function packageForTechnology(tech) {
   return { name, version, ecosystem: 'npm', file: 'Public website asset fingerprint', line: 1 };
 }
 
-export async function runDomainIntelligence(target, { baseScan = null, pages = [], robotsInfo = null } = {}) {
+export async function runDomainIntelligence(target, { baseScan = null, pages = [], robotsInfo = null, networkPath = null } = {}) {
   const root = registrableDomain(target.host);
   const graph = makeGraph(target.host);
   const notices = [];
@@ -426,6 +427,30 @@ export async function runDomainIntelligence(target, { baseScan = null, pages = [
   const link = graph.addEdge;
   const rootId = graph.rootId;
   const resolver = makeResolver();
+
+  if (networkPath?.hops?.length) {
+    const pathId = add({
+      id: 'network-path:' + target.host, type: 'network-path', label: 'Network route',
+      detail: `${networkPath.method || 'Traceroute'} to ${networkPath.destination}; ${networkPath.metrics?.hopsObserved || networkPath.hops.length} hops observed; destination ${networkPath.metrics?.destinationReached ? 'reached' : 'not confirmed'}.`,
+      source: 'Active network diagnostic', confidence: 'medium',
+      meta: { metrics: networkPath.metrics, method: networkPath.method, destination: networkPath.destination },
+    });
+    link(rootId, pathId, 'network path');
+    let previous = pathId;
+    for (const hop of networkPath.hops) {
+      const address = hop.addresses[0] || `no-response-${hop.ttl}`;
+      const hopId = add({
+        id: `network-hop:${hop.ttl}:${address}`, type: 'network-hop',
+        label: `Hop ${hop.ttl}${hop.addresses[0] ? ' · ' + hop.addresses[0] : ' · no response'}`,
+        detail: `${hop.probesAnswered}/${hop.probesSent} probes answered; RTT samples: ${hop.rttsMs.length ? hop.rttsMs.map((n) => n + ' ms').join(', ') : 'none'}. A timeout does not prove a host or router is absent.`,
+        source: 'UDP traceroute', confidence: 'medium',
+        meta: { ttl: hop.ttl, addresses: hop.addresses, rttsMs: hop.rttsMs, lossPercent: hop.lossPercent, reached: hop.reached },
+      });
+      link(previous, hopId, 'next route hop');
+      previous = hopId;
+    }
+  }
+  if (networkPath?.notice) notices.push(networkPath.notice);
 
   const [addresses, dnsInfo, mx, ns, txt, caa, ds, rootCname, cert, ct, archive] = await Promise.all([
     optional(() => resolvePublic(target.host)),
@@ -694,6 +719,12 @@ export async function runDomainIntelligence(target, { baseScan = null, pages = [
     link(rootId, id, 'has finding');
   }
 
+  for (const finding of cveFindings) {
+    finding.priority = calculateRiskPriority(finding, { exposure: 1 });
+    const node = graph.byId.get('cve:' + (finding.cve || finding.osvId));
+    if (node) node.meta = { ...node.meta, priority: finding.priority };
+  }
+
   if (baseScan?.blocked) notices.push('The website returned a block page during the baseline checks; some results may be incomplete.');
   if (baseScan?.findings?.length === 0) notices.push('No baseline security findings were reported. This is not proof that the website is secure.');
   const counts = graph.nodes.reduce((acc, item) => {
@@ -718,7 +749,11 @@ export async function runDomainIntelligence(target, { baseScan = null, pages = [
       vulnerabilities: counts.cve || 0,
       critical: graph.nodes.filter((item) => item.severity === 'critical').length,
       high: graph.nodes.filter((item) => item.severity === 'high').length,
+      networkHops: networkPath?.hops?.length || 0,
+      highestPriority: cveFindings.reduce((best, item) => Math.max(best, item.priority?.score ?? 0), 0),
     },
+    riskModel: { id: 'weighted-priority-v1', description: 'Prioritisation heuristic using CVSS (40%), EPSS (30%), CISA KEV (20%) and public exposure (10%); missing signals are omitted and remaining weights renormalised. Confidence adjusts the final score. This is not a probability of compromise.' },
+    networkPath,
     baseline: baseScan ? { score: baseScan.score, grade: baseScan.grade, findings: baseScan.findings || [], blocked: Boolean(baseScan.blocked) } : null,
     notices: unique(notices),
   };
