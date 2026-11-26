@@ -24,7 +24,7 @@ const EPSS_URL = 'https://api.first.org/data/v1/epss';
 const KEV_URL = 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json';
 let kevCache = { at: 0, entries: new Map() };
 
-async function intelligenceSignals(cveIds, doFetch) {
+export async function intelligenceSignals(cveIds, doFetch = globalThis.fetch) {
   const epss = new Map(); const kev = new Map(); const ids = [...new Set(cveIds.filter((id) => /^CVE-\d{4}-\d{4,}$/i.test(id)))];
   if (!ids.length) return { epss, kev, notices: [] };
   const notices = [];

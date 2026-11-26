@@ -6,8 +6,7 @@ import { MANIFEST_FOR_CVE, extension, isTestPath, normalizePath, skipReason } fr
 
 export const ruleCatalog = () => [...lineCatalog(), ...flowCatalog()];
 
-// This file runs in two places: on the server (the API) and in the visitor's browser (the source page).
-// Keep it free of Node-only imports.
+// This analysis engine runs only on the server. It is deliberately not published as a browser asset.
 const DEFAULT_MAX_FILE_BYTES = 512 * 1024;
 
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };

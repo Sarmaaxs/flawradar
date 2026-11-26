@@ -4,11 +4,12 @@ A web security checker for developers developed by Sarem Menur. Enter a website 
 
 - 29 checks in 7 groups, each with an explanation and a fix for nginx, Apache or Express where one applies
 - Bounded multi-page crawl (home + a few same-origin paths) so security headers only set on other routes are not missed
-- Scanner IP and user agent page with ready-made rules for nginx, ModSecurity, fail2ban, ufw and Cloudflare
+- A public scanner-address page for firewall allow-listing
 - Deep scan (exposed `.git`, `.env`, backups, directory listings, HTTP methods) that only runs after the site owner proves control, by a file or a DNS record
 - Optional **allow record** (`flawradar-allow=1` as DNS TXT at `_flawradar.<host>` or a file at `/.well-known/flawradar-allow.txt`) raises the per-host rate limit so owners who want scans are not treated as noise
 - Reports with a score, grade, history against the previous scan, and downloadable server config
-- Source code check: drop a folder, files or a .zip on `/source` and line rules plus file checks look for hard-coded secrets, SQL injection, XSS, shell injection, weak crypto, turned-off TLS checks and risky config. Known dependency CVEs are looked up via OSV when a lockfile is present. The check runs in the visitor's browser, so code never reaches the server (only package names and versions go to the server for the CVE lookup). The `/api/source` endpoints stay for people who run their own copy
+- Source code check: drop a folder, files or a .zip on `/source` and line rules plus file checks look for hard-coded secrets, SQL injection, XSS, shell injection, weak crypto, turned-off TLS checks and risky config. Known dependency CVEs are looked up via OSV when a lockfile is present. The source engine runs server-side: selected files are uploaded over HTTPS and analyzed in memory, while raw source contents are not intentionally persisted. Detection rules are not shipped as browser assets. The `/api/source` endpoints are used by the hosted page and local deployments.
+- Domain intelligence at `/intel`: an owner-verified relationship map of public DNS, certificate names, subdomains, public pages, endpoint references, technologies and version-linked advisories
 - No dependencies. Node's standard library and its built-in SQLite module
 
 ## Requirements
@@ -90,43 +91,6 @@ A visitor who has [proved control of a site](/verify) can ask for a watch: FlawR
 - `FLAWRADAR_BACKUP_DIR` turns on copies of the database (SQLite `VACUUM INTO`, safe while running), `FLAWRADAR_BACKUP_KEEP` of them are kept. `npm run backup` makes one now. `/api/health` returns 503 when the database does not answer and shows the time of the last backup, so an uptime monitor can watch it.
 - `.github/workflows/test.yml` runs the tests on every push.
 
-## How it works
-
-```
-server/
-  index.js          starts the server, purges old reports
-  app.js            routing, static files, API, security headers
-  scans.js          scan queue and concurrency limit
-  verify.js         ownership proof for deep scans
-  watch.js          watches: sign-up, confirmation, scheduled rescans, alerts
-  mail.js           small SMTP client
-  backup.js         automatic database copies
-  preflight.js      the go-live checklist behind `npm run check`
-  db.js             SQLite storage (node:sqlite)
-  ratelimit.js      sliding window limiter
-  source/
-    rules.js        the line rules and file checks, with explanations and fixes
-    analyze.js      runs the rules over uploaded files, masks secrets
-    filechecks.js   .env, Dockerfile, package.json, requirements.txt checks
-    zip.js          minimal zip reader with zip-bomb limits (in memory, nothing extracted)
-    paths.js        which files are read, and path cleaning
-    flow.js         follows request data through variables in one file; secrets by randomness
-    cves.js         known-vulnerability lookup for lockfiles (OSV)
-  scanner/
-    net.js          target parsing, private-address rules, DNS resolution
-    fetcher.js      HTTP client, pins the connection to a checked address
-    tls.js          handshake, certificate details, legacy protocol probe
-    dnsinfo.js      SPF, DMARC, CAA, MX lookups
-    html.js         extracts scripts, styles, frames and forms from HTML
-    checks.js       the checks and their fixes
-    deep.js         exposed-file probes
-    scan.js         runs a scan and collects the data the checks need
-    score.js        scoring and grade caps
-    fixes.js        bundles fixes into a server config file
-public/             the web pages, plain HTML with small custom elements
-test/               unit and integration tests
-```
-
 ### Safety of the scanner itself
 
 A tool that makes requests to addresses chosen by strangers can be turned against its own host. FlawRadar handles that in several places:
@@ -152,29 +116,30 @@ The web interface is built without `innerHTML`, and the site serves a strict Con
 | `POST /api/verify/check` | Checks whether the proof is in place |
 | `POST /api/source` | Body `{"files": [{"path": "src/a.js", "content": "..."}]}`. Returns findings, nothing stored |
 | `POST /api/source/zip` | Body is the raw .zip, `Content-Type: application/zip` |
+| `POST /api/intelligence` | Owner-verified domain relationship map and security findings |
 | `POST /api/watch` | Body `{"url", "email", "terms"}`. Starts a watch; a confirmation link is emailed |
 | `DELETE /api/scans/:id` | Header `X-FlawRadar-Delete` with the secret returned when the scan was created |
-| `GET /api/source/rules` | The rule list and upload limits |
-| `GET /api/scanner` | Published addresses, user agent, contact |
-| `GET /api/checks` | The list of checks with explanations |
+| `GET /api/scanner` | Published scanner addresses, terms version and required public legal metadata |
 | `GET /api/health` | Liveness |
 
 ## Source code scanning
 
-The rules in `server/source/rules.js` match one line at a time. On top of them, `server/source/flow.js` does a second pass over each JavaScript, TypeScript, Python and PHP file: it finds variables filled from request data (`req.query`, `$_GET`, `request.args`, `location.hash`), follows them into other variables, and reports when they reach a SQL string, a shell, `eval`, `innerHTML`, a file path, an outgoing request, a redirect or a module load. It also reports secret-named variables that hold random-looking values (entropy). It stays inside one file and does not follow data through function calls or across files, so each such finding is medium or low confidence, and logic errors such as missing permission checks are still not found. Add a sink by adding an object to `JS_SINKS`, `PY_SINKS` or `PHP_SINKS` and a case to `test/flow.test.js`.
+The source checker analyzes selected files on the server after upload over HTTPS. Files are processed in memory and raw source contents are not intentionally persisted. The detection engine is not sent as browser JavaScript. Findings include severity, a short explanation and a remediation direction; secret values are masked. Dependency advisories are best-effort and depend on the package ecosystem and version data available in the supplied manifests.
 
-Known vulnerabilities in dependencies are looked up via the OSV API when a `package-lock.json` or pinned `requirements.txt` is present (and, less precisely, from `package.json` version ranges if no lockfile exists). The lookup is best-effort: if OSV is unreachable the scan still finishes and a notice is shown. Coverage is not complete — also run `npm audit`, `pip-audit` or `osv-scanner` in CI.
+Uploads are bounded by file count, per-file size, total text size and ZIP expansion limits. Generated files and common dependency folders are skipped. Do not upload code you are not authorized to share with the service.
 
-Uploads are limited to 3000 files, 512 KB per file, 30 MB of text and a 10 MB zip (see `server/config.js`). Folders like `node_modules`, `.git`, `vendor`, `dist` and `build` are skipped, and lines over 1000 characters (minified code) are skipped. Zips are read in memory with a hard cap on how far any entry may inflate.
+## Domain intelligence
 
-To add a rule, add an object to `RULES` with an `id`, `title`, `severity`, `confidence`, `pattern`, `why`, `fix` and optionally `exts` and a `filter` function, then add a positive and a negative case to `test/source.test.js`.
+The `/intel` page requires proof of control through DNS TXT or a well-known file. It maps the submitted host using public DNS, Certificate Transparency, a public web archive, robots.txt and sitemap metadata, same-origin pages, forms and statically referenced API paths. It fingerprints visible technologies and correlates exact version evidence with OSV or NVD advisories. CVEs are enriched with CVSS, EPSS and CISA KEV context when available.
+
+Discovered subdomains are shown as relationships and are DNS-resolved only; the service does not automatically send HTTP requests to every discovered subdomain. The page inventory prioritizes linked, sitemap-listed and common authentication or administration entry points, while respecting robots.txt exclusions. It does not submit forms, attempt logins, brute-force paths, bypass access controls or run exploits. A historical URL, robots entry or possible dangling CNAME is a lead for an authorized owner to verify, not proof of a current vulnerability.
 
 ## Limits
 
 - It checks the home page plus a few same-origin paths. Headers set only on deep or unlinked paths may still be missed.
 - It reads policies as written; it does not run the page, so it cannot tell whether a CSP breaks the site.
 - DKIM cannot be checked from outside.
-- The scan queue and rate limiter are in memory, so this is built for one process. Reports survive restarts, in-flight scans do not.
+- The scan queue and rate limiter are in memory, so this is built for one process. Reports survive restarts, in-flight scans do not. Domain intelligence is request-scoped and is not saved as a public report.
 - Old TLS probing depends on the local OpenSSL build. When it cannot tell, the check says so instead of passing silently.
 
 ## Adding a check

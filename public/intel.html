@@ -1,11 +1,87 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Vulnerability intelligence - FlawRadar</title><meta name="description" content="Explore cached vulnerability records and relationships between CVEs, package ecosystems and aliases."><link rel="stylesheet" href="/assets/css/flawradar.css"><link rel="icon" href="/assets/favicon.svg" type="image/svg+xml"></head>
-<body><w-header current="intel"></w-header><main>
-<p class="muted">FLAWRADAR / BETA</p><h1>Vulnerability intelligence</h1><p class="lead">A relationship view of public advisory records found during source-code checks. Nodes connect advisories to package ecosystems and alternate identifiers.</p>
-<div class="intel-tools"><input id="intel-search" type="text" placeholder="Filter CVE, package or alias" aria-label="Filter graph"><select id="intel-severity" aria-label="Severity"><option value="all">All severities</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select><button id="intel-refresh" type="button">Refresh</button><span id="intel-status" class="muted" role="status">Loading records…</span></div>
-<div class="intel-metrics"><div class="intel-metric"><b>Advisories</b><span id="metric-total">—</span></div><div class="intel-metric"><b>Critical</b><span id="metric-critical">—</span></div><div class="intel-metric"><b>Known exploited</b><span id="metric-kev">—</span></div><div class="intel-metric"><b>High EPSS (≥10%)</b><span id="metric-epss">—</span></div></div>
-<div id="intel-empty" class="intel-empty" hidden>No vulnerability records have been cached yet. Run a source-code check with a dependency lockfile to populate the graph.</div>
-<div class="intel-graph-wrap"><svg id="intel-graph" viewBox="0 0 1000 400" role="img" aria-label="Interactive vulnerability relationship graph"></svg></div>
-<section id="intel-detail" class="intel-detail"><h2>Select a node</h2><p>Choose a CVE, package or identifier in the graph to inspect its relationships.</p></section>
-<p class="muted">The graph shows relationships contained in cached advisory records. A connection does not mean that two packages are installed together or that a vulnerability is exploitable in your deployment.</p>
-</main><w-footer></w-footer><script type="module" src="/assets/js/intel.js"></script></body></html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Domain Intelligence - FlawRadar</title>
+<meta name="description" content="Map a verified domain's public attack surface, infrastructure relationships, technologies and known vulnerabilities.">
+<link rel="stylesheet" href="/assets/css/flawradar.css">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<w-header current="intel"></w-header>
+<main class="domain-intel-page">
+  <p class="muted">FLAWRADAR / DOMAIN INTELLIGENCE</p>
+  <h1>Domain intelligence</h1>
+  <p class="lead">Build a relationship map of a domain's public infrastructure, certificates, discovered pages, technologies and known vulnerabilities.</p>
+
+  <section class="intel-start">
+    <form id="intel-form" novalidate>
+      <fieldset>
+        <legend>Investigation target</legend>
+        <label for="intel-host">Domain or website</label>
+        <div class="intel-tools">
+          <input id="intel-host" type="text" inputmode="url" autocomplete="url" placeholder="example.com" required>
+          <button id="intel-prepare" type="submit">Prepare verification</button>
+        </div>
+        <div class="check">
+          <input id="intel-terms" type="checkbox" required>
+          <label for="intel-terms">I own this domain or have written permission to assess it, and I accept the <a href="/terms">Terms</a> and <a href="/acceptable-use">Acceptable Use Policy</a>.</label>
+        </div>
+        <p id="intel-error" class="alert" role="alert" hidden></p>
+      </fieldset>
+    </form>
+    <section id="intel-proof" class="intel-proof" hidden>
+      <h2>Verify domain control</h2>
+      <p>Place this token in a DNS TXT record or a file on the exact hostname. This prevents someone from using FlawRadar to actively map a domain they do not control.</p>
+      <div class="intel-proof-grid">
+        <div><h3>DNS TXT record</h3><p>Name</p><code id="intel-dns-name"></code><p>Value</p><w-copy id="intel-dns-value"></w-copy></div>
+        <div><h3>Verification file</h3><p>Path</p><code id="intel-file-path"></code><p>Contents</p><w-copy id="intel-file-value"></w-copy></div>
+      </div>
+      <div class="intel-tools"><button id="intel-check-proof" type="button">Check verification</button><span id="intel-proof-status" role="status" class="muted"></span></div>
+    </section>
+  </section>
+
+  <section id="intel-results" hidden>
+    <div class="intel-results-head">
+      <div><h2 id="intel-result-host"></h2><p id="intel-generated" class="muted"></p></div>
+      <div class="intel-tools"><button id="intel-export" type="button">Export JSON</button><button id="intel-new" type="button" class="secondary">New investigation</button></div>
+    </div>
+    <div class="intel-metrics">
+      <div class="intel-metric"><b>Assets mapped</b><span id="metric-assets">0</span></div>
+      <div class="intel-metric"><b>Relationships</b><span id="metric-edges">0</span></div>
+      <div class="intel-metric"><b>Subdomains</b><span id="metric-subdomains">0</span></div>
+      <div class="intel-metric"><b>Technologies</b><span id="metric-tech">0</span></div>
+      <div class="intel-metric"><b>Known CVEs</b><span id="metric-cves">0</span></div>
+      <div class="intel-metric"><b>Critical findings</b><span id="metric-critical">0</span></div>
+    </div>
+    <div class="intel-workspace">
+      <aside class="intel-inspector">
+        <h3>Investigation</h3>
+        <label for="intel-search">Find an asset</label>
+        <input id="intel-search" type="search" placeholder="Search names, paths, CVEs">
+        <label for="intel-type">Asset type</label>
+        <select id="intel-type"><option value="all">All asset types</option></select>
+        <label for="intel-severity">Severity</label>
+        <select id="intel-severity"><option value="all">All severities</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option><option value="info">Informational</option></select>
+        <div id="intel-legend" class="intel-legend"></div>
+        <h3>Selected asset</h3>
+        <section id="intel-detail" class="intel-detail"><p>Select a node in the map.</p></section>
+      </aside>
+      <section class="intel-map-panel">
+        <div class="intel-map-toolbar"><span id="intel-map-status" role="status">Relationship map</span><div><button id="intel-zoom-in" type="button" aria-label="Zoom in">+</button><button id="intel-zoom-out" type="button" aria-label="Zoom out">−</button><button id="intel-fit" type="button">Fit</button></div></div>
+        <div class="intel-graph-wrap"><svg id="intel-graph" viewBox="0 0 1200 820" role="img" aria-label="Interactive domain relationship map"></svg></div>
+        <div id="intel-notices" class="intel-notices"></div>
+      </section>
+    </div>
+    <section class="intel-findings">
+      <h2>Security findings</h2>
+      <div id="intel-findings-list"></div>
+    </section>
+  </section>
+  <p class="fine"><small>Only public, read-only requests are made. FlawRadar does not submit forms, attempt logins, bypass access controls, or fetch paths disallowed by robots.txt. A robots.txt entry is a public hint, not proof that a page is accessible. CVE matches require a detected product and version and may need manual confirmation.</small></p>
+</main>
+<w-footer></w-footer>
+<script type="module" src="/assets/js/intel.js"></script>
+</body>
+</html>

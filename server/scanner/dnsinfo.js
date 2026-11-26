@@ -4,7 +4,7 @@ export function makeResolver() {
   return new Resolver({ timeout: 4000, tries: 2 });
 }
 
-const SECOND_LEVEL = new Set(['co', 'com', 'net', 'org', 'gov', 'edu', 'ac', 'or', 'ne', 'go']);
+const SECOND_LEVEL = new Set(['co', 'com', 'net', 'org', 'gov', 'edu', 'ac', 'or', 'ne', 'go', 'pro', 'biz', 'info', 'web']);
 
 /**
  * Best guess at the registrable domain without a public suffix list.

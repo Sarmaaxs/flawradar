@@ -46,8 +46,10 @@ function detectBlock(res) {
   return { status, vendor };
 }
 
-async function findSecurityTxt(base) {
+async function findSecurityTxt(base, disallow = []) {
+  let skipped = false;
   for (const path of ['/.well-known/security.txt', '/security.txt']) {
+    if (robotsDisallowsPath(path, disallow)) { skipped = true; continue; }
     const r = await tryFetch(`${base}${path}`, { maxBytes: 8192 });
     const res = r.res;
     if (res && res.status === 200 && /^\s*Contact:/im.test(res.body) && !/<html/i.test(res.body.slice(0, 200))) {
@@ -55,11 +57,11 @@ async function findSecurityTxt(base) {
       return { found: true, path, expires };
     }
   }
-  return { found: false };
+  return { found: false, skippedByRobots: skipped };
 }
 
 
-const MAX_CRAWL_PAGES = 3;
+const MAX_CRAWL_PAGES = 5;
 const CRAWL_CANDIDATES = ['/login', '/signin', '/account', '/app', '/dashboard', '/admin', '/about', '/contact', '/pricing', '/docs'];
 
 /** Same-origin internal paths from the home page, plus a few common routes. */
@@ -93,20 +95,101 @@ function pickCrawlPaths(homeRes, limit = MAX_CRAWL_PAGES) {
   for (const p of CRAWL_CANDIDATES) consider(p);
 
   // Prefer short, interesting paths
-  out.sort((a, b) => a.split('/').length - b.split('/').length || a.length - b.length);
+  out.sort((a, b) => {
+    const priority = (p) => /(?:admin|dashboard|login|log-in|signin|sign-in|account|portal|manage|console)/i.test(p) ? 0 : 1;
+    return priority(a) - priority(b) || a.split('/').length - b.split('/').length || a.length - b.length;
+  });
   return out.slice(0, limit);
 }
 
-async function crawlExtraPages(homeRes, base, tryFetchFn) {
-  const paths = pickCrawlPaths(homeRes);
+export function robotsDisallowRules(text) {
+  const rules = [];
+  let wildcard = false;
+  let groupHasRules = false;
+  for (const raw of String(text || '').split(/\r?\n/)) {
+    const line = raw.replace(/#.*/, '').trim();
+    const match = /^([^:]+):\s*(.*)$/i.exec(line);
+    if (!match) continue;
+    const key = match[1].trim().toLowerCase();
+    const value = match[2].trim();
+    if (key === 'user-agent') {
+      if (groupHasRules) { wildcard = false; groupHasRules = false; }
+      wildcard = wildcard || value === '*';
+    } else if (key === 'disallow' && wildcard && value.startsWith('/')) {
+      rules.push(value); groupHasRules = true;
+    } else if (key === 'allow' && wildcard) groupHasRules = true;
+  }
+  return [...new Set(rules)];
+}
+
+export function robotsDisallowsPath(pathname, rules = []) {
+  return rules.some((rule) => rule && pathname.startsWith(rule));
+}
+
+export function sitemapPaths(xml, base, rules = []) {
+  const origin = new URL(base).origin;
+  const host = new URL(base).hostname;
+  const paths = [];
+  for (const match of String(xml || '').matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/gi)) {
+    try {
+      const url = new URL(match[1].replace(/&amp;/g, '&').trim(), base);
+      if (url.origin !== origin || url.hostname !== host || !['http:', 'https:'].includes(url.protocol)) continue;
+      if (robotsDisallowsPath(url.pathname, rules)) continue;
+      if (/\.(?:css|js|mjs|map|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|pdf|zip|xml|json)$/i.test(url.pathname)) continue;
+      paths.push(url.pathname);
+    } catch {}
+  }
+  return [...new Set(paths)].slice(0, 40);
+}
+
+async function crawlExtraPages(homeRes, base, tryFetchFn, { onPage = () => {}, onRobots = () => {} } = {}) {
+  // Respect the site's published crawler exclusions. robots.txt is not access control;
+  // this scanner simply avoids fetching paths the owner asked crawlers to leave alone.
+  const robots = await tryFetchFn(`${base}/robots.txt`, { maxBytes: 60_000, timeoutMs: 3000 });
+  const rules = robots.res?.status === 200 ? robotsDisallowRules(robots.res.body) : [];
+  const sitemaps = [];
+  if (robots.res?.status === 200) {
+    for (const line of robots.res.body.split(/\r?\n/)) {
+      const match = /^\s*Sitemap:\s*(\S+)/i.exec(line);
+      if (!match) continue;
+      try { const u = new URL(match[1], base); if (u.origin === base) sitemaps.push(u.href); } catch {}
+    }
+  }
+  const sitemapHints = [...new Set(sitemaps)].slice(0, 5);
+  const sitemapFetchTargets = sitemapHints.length ? sitemapHints : [`${base}/sitemap.xml`];
+  let sitemapPage = null;
+  for (const url of sitemapFetchTargets.slice(0, 1)) {
+    let sitemapPath = '/sitemap.xml';
+    try { sitemapPath = new URL(url).pathname; } catch {}
+    if (robotsDisallowsPath(sitemapPath, rules)) continue;
+    const result = await tryFetchFn(url, { maxBytes: 100_000, timeoutMs: 3000 });
+    if (result.res?.status === 200 && /<(?:urlset|sitemapindex)\b/i.test(result.res.body.slice(0, 2000))) {
+      sitemapPage = result.res;
+      break;
+    }
+  }
+  const fromSitemap = sitemapPage ? sitemapPaths(sitemapPage.body, base, rules) : [];
+  onRobots({ disallow: rules, sitemaps: sitemapHints.length ? sitemapHints : (sitemapPage ? [sitemapPage.url] : []), paths: fromSitemap, found: Boolean(robots.res?.status === 200), sitemapFound: Boolean(sitemapPage) });
+
+  const candidates = [...new Set([...pickCrawlPaths(homeRes, MAX_CRAWL_PAGES * 3), ...fromSitemap])]
+    .filter((pathname) => !robotsDisallowsPath(pathname, rules));
+  candidates.sort((a, b) => {
+    const priority = (p) => /(?:admin|dashboard|login|log-in|signin|sign-in|account|portal|manage|console)/i.test(p) ? 0 : 1;
+    return priority(a) - priority(b) || a.split('/').length - b.split('/').length || a.length - b.length;
+  });
   const pages = [];
-  for (const path of paths) {
-    const r = await tryFetchFn(`${base}${path}`, { maxBytes: 200_000, maxRedirects: 3 });
-    if (!r.res || r.res.status >= 400) continue;
+  for (const pathname of candidates.slice(0, MAX_CRAWL_PAGES * 2)) {
+    const r = await tryFetchFn(`${base}${pathname}`, { maxBytes: 180_000, maxRedirects: 2, timeoutMs: 3500 });
+    if (!r.res || (r.res.status >= 400 && ![401, 403].includes(r.res.status))) continue;
     const finalHost = new URL(r.res.url).hostname;
     const homeHost = new URL(homeRes.url).hostname;
     if (finalHost !== homeHost) continue;
-    pages.push({ path, res: r.res });
+    const finalUrl = new URL(r.res.url);
+    finalUrl.search = ''; finalUrl.hash = '';
+    const safeRes = { ...r.res, url: finalUrl.href };
+    const page = { path: pathname, res: safeRes };
+    pages.push(page);
+    onPage({ url: finalUrl.href, body: r.res.body, headers: r.res.headers, status: r.res.status, path: pathname, source: fromSitemap.includes(pathname) ? 'sitemap' : 'same-origin link or route' });
     if (pages.length >= MAX_CRAWL_PAGES) break;
   }
   return pages;
@@ -119,7 +202,7 @@ async function crawlExtraPages(homeRes, base, tryFetchFn) {
  * @param options { deep, onStep(name, state), resolver, ports }
  */
 export async function runScan(target, options = {}) {
-  const { deep = false, onStep = () => {}, resolver, ports = portsFor(target) } = options;
+  const { deep = false, onStep = () => {}, onPage = () => {}, onRobots = () => {}, resolver, ports = portsFor(target) } = options;
   const started = Date.now();
 
   const ctx = {
@@ -153,6 +236,8 @@ export async function runScan(target, options = {}) {
     const viaHttps = await tryFetch(`${originFor(target, 'https', ports)}/`);
     if (viaHttps.res) {
       ctx.page = { res: viaHttps.res, https: new URL(viaHttps.res.url).protocol === 'https:' };
+      const safeHome = new URL(viaHttps.res.url); safeHome.search = ''; safeHome.hash = '';
+      onPage({ url: safeHome.href, body: viaHttps.res.body, headers: viaHttps.res.headers, status: viaHttps.res.status, path: '/', source: 'homepage' });
       return;
     }
     const viaHttp = await tryFetch(`${originFor(target, 'http', ports)}/`);
@@ -164,6 +249,8 @@ export async function runScan(target, options = {}) {
       );
     }
     ctx.page = { res: viaHttp.res, https: false, httpsError: viaHttps.error };
+    const safeHome = new URL(viaHttp.res.url); safeHome.search = ''; safeHome.hash = '';
+    onPage({ url: safeHome.href, body: viaHttp.res.body, headers: viaHttp.res.headers, status: viaHttp.res.status, path: '/', source: 'homepage' });
   });
 
   const base = new URL(ctx.page.res.url).origin;
@@ -223,13 +310,6 @@ export async function runScan(target, options = {}) {
       },
       { soft: true },
     ),
-    step(
-      'Look for security.txt',
-      async () => {
-        ctx.securityTxt = await findSecurityTxt(base);
-      },
-      { soft: true },
-    ),
   );
   if (!target.isIp) {
     tasks.push(
@@ -248,10 +328,13 @@ export async function runScan(target, options = {}) {
   await step(
     'Check a few more pages',
     async () => {
-      ctx.extraPages = await crawlExtraPages(ctx.page.res, base, tryFetch);
+      ctx.extraPages = await crawlExtraPages(ctx.page.res, base, tryFetch, { onPage, onRobots: (info) => { ctx.robotsInfo = info; onRobots(info); } });
     },
     { soft: true },
   );
+  await step('Look for security.txt', async () => {
+    ctx.securityTxt = await findSecurityTxt(base, ctx.robotsInfo?.disallow || []);
+  }, { soft: true });
 
   // 3. Deep probes, only when the caller has already proved ownership.
   if (deep) {
@@ -281,6 +364,7 @@ export async function runScan(target, options = {}) {
           validTo: ctx.tls.cert?.validTo || null,
         }
       : null,
+    securityTxt: ctx.securityTxt || { found: false },
     durationMs: Date.now() - started,
   };
 }

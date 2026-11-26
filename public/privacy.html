@@ -16,7 +16,7 @@
   <p class="doc-meta">Version <span class="fill unset" data-legal="termsVersion">[VERSION]</span>. This policy is part of the <a href="/terms">Terms of Service</a>.</p>
 
   <div class="summary-box">
-    <b>In short.</b> FlawRadar has no accounts, sets no cookies and has no analytics or advertising. Scan reports are kept for a limited time and then deleted. Your IP address is used in memory for rate limiting and is not saved to the database. Source code you drop on the source page is checked in your browser and is not sent to us; only the package names and versions from a lockfile are sent, to look up known vulnerabilities.
+    <b>In short.</b> FlawRadar has no accounts, sets no cookies and has no analytics or advertising. Scan reports are kept for a limited time and then deleted. Your IP address is used in memory for rate limiting and is not saved to the database. Source files you choose are sent over HTTPS and analyzed in memory; raw source files are not written to the application database or included in reports. Dependency identifiers may be sent to public vulnerability databases for advisory matching.
   </div>
 
   <ol class="toc">
@@ -80,8 +80,8 @@
         <tr>
           <td><b>Source code you check on the source page.</b></td>
           <td>To show you the results of the source check, on your own device.</td>
-          <td>Your code is not sent to us. The check runs in your browser. Only package names and versions from a lockfile are sent, to look up known vulnerabilities, and are not stored. (Code sent straight to the Service's API, not through the source page, is read in memory and discarded.)</td>
-          <td>We do not hold it.</td>
+          <td>Selected source files are sent over HTTPS to the Service and analyzed in memory. Raw source contents are not stored in the application database, written to application-managed files, or included in reports. Dependency identifiers may be sent to public vulnerability databases for advisory matching.</td>
+          <td>Not stored persistently by the application. Held in memory only while the request is processed.</td>
         </tr>
         <tr>
           <td><b>Ownership proof record.</b> A host name and a random token created for it.</td>
@@ -106,10 +106,10 @@
   <div class="c">The Target's operator will see requests from the Scanner Addresses with a FlawRadar user agent in their own logs.</div>
 
   <h2 id="source">Uploaded Source Code</h2>
-  <div class="c">The source code check runs in your browser. Files you drop on the source page are read by a script on your own computer, checked there by automated pattern rules, and are not sent to the Service. We do not receive, store, log or read them, and they are not used to train any model. Zip files are opened inside your browser.</div>
-  <div class="c">The results are produced in your browser and shown only to you. A finding shows the file name, the line number and the line itself. Where the Service recognises a secret (for example a cloud key or a token), it shows only the first characters of it. The Service does not receive the results.</div>
-  <div class="c">One thing does leave your device: when a lockfile or requirements file is found, the package names, versions and the name of that file are sent to the Service, which passes the names and versions to the public OSV vulnerability database (osv.dev) to find known vulnerabilities. They are not stored by the Service and contain none of your code. Code sent straight to the Service's API, instead of being checked on the source page, is analysed in memory and discarded when the response is sent; it is not written to disk or logged.</div>
-  <div class="c">Because the check runs on your own device, your browser, extensions and operating system may keep copies of what you open. That is outside our control. If code were ever sent to the API described above, the Service's host could handle memory in ways we do not control (for example swap files or crash diagnostics), and we cannot promise that no trace could ever exist at the infrastructure level.</div>
+  <div class="c">The source code check runs on the Service after you upload selected files over HTTPS. Files are parsed and analyzed in memory. The application does not write raw source contents to its database, application-managed files or request logs. Zip files are opened in memory by the server. Do not upload code you are not authorized to share with the Service.</div>
+  <div class="c">The Service returns the findings to your browser and shows them on the page. A finding shows the file name, line number and a redacted code excerpt. Where the Service recognises a secret (for example a cloud key or token), it shows only a masked excerpt. The findings are processed in memory and are not added to the persistent scan-report database.</div>
+  <div class="c">When dependency manifests are present, package names and resolved versions may be sent to public vulnerability databases such as OSV to identify known advisories. The Service does not intentionally retain uploaded source files or dependency inventories. Application logs contain request metadata, not request bodies or file contents. As with any hosted service, infrastructure-level memory handling, crash diagnostics or swap behavior may be outside the application's control; therefore do not upload highly sensitive code unless you have permission and accept this processing.</div>
+  <div class="c">Your own browser and operating system may retain local copies of selected files. The Service cannot control those local copies. The Service also cannot promise that infrastructure-level memory handling, crash diagnostics or swap behavior will never create temporary traces.</div>
 
   <h2 id="watches">Watches (Scheduled Scans and Email Alerts)</h2>
   <div class="c">If you sign up for a watch, we store the host name, your email address, a secret used in the links we email you, the time you signed up and confirmed, and the score and grade of the last scan. We use your address only to send the confirmation link, the alerts you asked for, and a notice if the watch is paused because the ownership proof was removed. We do not use it for marketing and we do not share it, except with the email provider that delivers the messages (<span class="fill unset" data-legal="hosting">[HOSTING PROVIDER AND REGION]</span> or its mail service).</div>
@@ -142,7 +142,7 @@
   <div class="c">Because the Service does not keep IP addresses or accounts, we cannot find "your" scans without the Report link or host name you give us.</div>
 
   <h2 id="security">Security</h2>
-  <div class="c">We use measures that fit the Service, including encrypted connections where the Service is served over HTTPS, a strict browser security policy for the pages, limits on what a scan may connect to, and running the source check in your browser so that code is not sent to us. No system is completely secure. If a breach affects your personal data, we will notify you and the authorities where the law requires.</div>
+  <div class="c">We use measures that fit the Service, including encrypted connections where the Service is served over HTTPS, a strict browser security policy for the pages, limits on what a scan may connect to, and keeping uploaded source contents in memory and excluding them from application logs and persistent application storage. No system is completely secure. If a breach affects your personal data, we will notify you and the authorities where the law requires.</div>
 
   <h2 id="transfers">Where Data Is Processed</h2>
   <div class="c">Data is processed where the Service is hosted: <span class="fill unset" data-legal="hosting">[HOSTING PROVIDER AND REGION]</span>. If you are in a country with different data-protection rules, your data may be moved to and processed in a country whose rules differ from yours. Where the law requires safeguards for such transfers, we use them.</div>

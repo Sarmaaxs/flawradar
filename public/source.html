@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Check source code - FlawRadar</title>
-<meta name="description" content="Drop a website's source code on the page and FlawRadar looks for hard-coded secrets, injection and cross-site scripting patterns, weak crypto and risky settings. Nothing is stored.">
+<meta name="description" content="Drop a website's source code on the page and FlawRadar looks for hard-coded secrets, injection and cross-site scripting patterns, weak crypto and risky settings. Raw source files are not intentionally retained.">
 <link rel="stylesheet" href="/assets/css/flawradar.css">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 </head>
@@ -12,12 +12,12 @@
 <w-header current="source"></w-header>
 
 <main>
-  <p><a class="button" href="/intel">Open CVE intelligence beta</a></p>
+  <p><a class="button" href="/intelligence">Open domain intelligence</a></p>
   <h1>Check your source code</h1>
-  <p class="lead">Drop the folder (or a .zip) of your website's code. Your browser reads it for hard-coded secrets, SQL injection and cross-site scripting patterns, shell commands built from strings, weak crypto, turned-off TLS checks, and risky settings in config and dependency files.</p>
+  <p class="lead">Drop the folder (or a .zip) of your website's code. FlawRadar checks for exposed secrets, injection patterns, unsafe data flows, weak cryptography and risky configuration. Detection runs on the server so its rule implementation is not shipped to every visitor.</p>
 
   <div class="notice">
-    <b>Your code stays on your computer.</b> The check runs inside this page, in your browser. Your files are not sent to FlawRadar, not stored, and there is no report or link to share. The one thing that does leave is the list of package names and versions from a lockfile, sent to look up known vulnerabilities. You can confirm this: open your browser's developer tools, look at the Network tab and drop a folder. Secrets found in the code are shown only as the first few characters.
+    <b>Source handling.</b> Selected files are sent over HTTPS and analyzed in memory. FlawRadar does not write uploaded source files to disk or include raw file contents in reports. Dependency identifiers may be sent to public vulnerability databases for advisory matching. Secrets shown in findings are masked. Do not upload code you are not authorized to share with this service.
   </div>
 
   <div id="consent-box" class="consent">
@@ -60,10 +60,6 @@
   <h2>Limits</h2>
   <p id="limits" class="muted">Loading...</p>
 
-  <details>
-    <summary>All the rules (<span id="rule-count">...</span>)</summary>
-    <table id="rules" aria-label="Rules"></table>
-  </details>
 </main>
 
 <w-footer></w-footer>

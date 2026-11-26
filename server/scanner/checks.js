@@ -856,7 +856,9 @@ export function evaluate(ctx) {
       category: check.category,
       title: check.title,
       severity: check.severity,
+      why: check.why,
       ref: check.ref,
+      deep: Boolean(check.deep),
       ...result,
     };
   });

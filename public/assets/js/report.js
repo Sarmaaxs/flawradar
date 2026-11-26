@@ -10,7 +10,6 @@ const STATUS_ORDER = { fail: 0, warn: 1, pass: 2, info: 3, skip: 4 };
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 const TAB_LABELS = { nginx: 'nginx', apache: 'Apache', express: 'Express', dns: 'DNS', file: 'File' };
 
-let checks = {};
 let scan = null;
 
 function showProblem(title, ...body) {
@@ -35,9 +34,8 @@ function renderSteps(progress) {
 }
 
 function findingNode(f) {
-  const meta = checks[f.id] || {};
   const body = h('div', { class: 'body' });
-  if (meta.why) body.append(h('p', {}, h('b', {}, 'Why it matters. '), meta.why));
+  if (f.why) body.append(h('p', {}, h('b', {}, 'Why it matters. '), f.why));
   if (f.evidence) body.append(h('pre', { class: 'evidence' }, f.evidence));
   if (f.fix) {
     body.append(h('p', {}, h('b', {}, 'How to fix. '), f.fix.text));
@@ -79,8 +77,7 @@ function plainWords(r) {
   } else {
     parts.push(h('p', {}, h('b', {}, `${bad.length} thing${bad.length === 1 ? '' : 's'} to fix. Start with these:`)));
     parts.push(h('ol', { class: 'plain' }, ...bad.slice(0, 3).map((f) => {
-      const meta = checks[f.id] || {};
-      return h('li', {}, h('b', {}, f.title), '. ', meta.why || f.detail || '', f.fix ? h('span', {}, ' ', h('b', {}, 'What to do: '), f.fix.text) : '');
+          return h('li', {}, h('b', {}, f.title), '. ', f.why || f.detail || '', f.fix ? h('span', {}, ' ', h('b', {}, 'What to do: '), f.fix.text) : '');
     })));
     parts.push(h('p', { class: 'muted' }, 'The full list is below. Open any item to see the exact setting to paste.'));
   }
@@ -93,10 +90,9 @@ function reportText(s) {
   const lines = [`FlawRadar report for ${s.host}`, `Scanned ${formatDate(s.createdAt)}`, `Grade ${r.grade}, score ${r.score} out of 100`, ''];
   const label = { fail: 'FAILED', warn: 'WARNING', pass: 'PASSED', info: 'NOTE', skip: 'NOT RUN' };
   for (const f of [...r.findings].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity])) {
-    const meta = checks[f.id] || {};
-    lines.push(`[${label[f.status] || f.status}] ${f.title}`);
+      lines.push(`[${label[f.status] || f.status}] ${f.title}`);
     if (f.detail) lines.push(`  What we saw: ${f.detail}`);
-    if (meta.why && f.status !== 'pass') lines.push(`  Why it matters: ${meta.why}`);
+    if (f.why && f.status !== 'pass') lines.push(`  Why it matters: ${f.why}`);
     if (f.fix) lines.push(`  What to do: ${f.fix.text}`);
     if (f.fix?.snippets) for (const [k, v] of Object.entries(f.fix.snippets)) lines.push(`  --- ${TAB_LABELS[k] || k} ---`, ...String(v).split('\n').map((l) => `  ${l}`));
     lines.push('');
@@ -156,7 +152,7 @@ function renderResult(s) {
     prev.hidden = false;
   }
 
-  const deepSkipped = r.findings.some((f) => f.status === 'skip' && checks[f.id]?.deep);
+  const deepSkipped = r.findings.some((f) => f.status === 'skip' && f.deep);
   $('#deep-note').hidden = !deepSkipped;
   $('#deep-link').setAttribute('href', `/verify?host=${encodeURIComponent(s.host)}`);
   const allowNote = $('#allow-note');
@@ -288,10 +284,4 @@ $('#rescan').addEventListener('click', async (event) => {
   }
 });
 
-try {
-  const { checks: list } = await api('/api/checks');
-  checks = Object.fromEntries(list.map((c) => [c.id, c]));
-} catch {
-  /* the report still works without the explanations */
-}
 poll();

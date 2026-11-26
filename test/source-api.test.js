@@ -93,9 +93,14 @@ test('nothing from an upload is stored', async () => {
   await postJson('/api/source', { files: [{ path: 'a.js', content: `eval("${marker}")` }] });
   const rows = db.countHostScansSince('anything', 0);
   assert.equal(rows, 0);
-  const rules = await (await fetch(base + '/api/source/rules')).json();
-  assert.ok(rules.rules.length > 50);
-  assert.ok(!JSON.stringify(rules).includes(marker));
+  assert.equal((await fetch(base + '/api/source/rules')).status, 404);
+  assert.equal((await fetch(base + '/assets/engine/analyze.js')).status, 404);
+});
+
+test('domain intelligence requires the current terms before processing a target', async () => {
+  const stale = await postJson('/api/intelligence', { host: 'example.com' }, 'old');
+  assert.equal(stale.status, 400);
+  assert.equal(stale.body.error.code, 'terms_required');
 });
 
 test('the source page is served with the strict policy', async () => {
@@ -114,13 +119,12 @@ test('public advisory intelligence is cached as relationships without source inv
     aliases: ['CVE-2024-12345', 'GHSA-demo-1234'], affectedPackages: [{ ecosystem: 'npm', name: 'demo-package' }],
     advisoryReferences: [{ type: 'ADVISORY', url: 'https://example.org/advisory' }], affectedRanges: [{ type: 'SEMVER', events: [{ fixed: '2.0.0' }] }],
   }]);
-  const res = await fetch(base + '/api/intel');
-  assert.equal(res.status, 200);
-  const { records } = await res.json();
-  const row = records.find((x) => x.osv_id === 'GHSA-demo-1234');
+  assert.equal((await fetch(base + '/api/intel')).status, 404);
+  const row = db.recentCveIntel(120).find((x) => x.osv_id === 'GHSA-demo-1234');
   assert.ok(row);
   assert.deepEqual(row.aliases, ['CVE-2024-12345', 'GHSA-demo-1234']);
-  assert.deepEqual(row.affectedPackages, [{ ecosystem: 'npm', name: 'demo-package' }]);
+  assert.equal(row.affectedPackages[0].ecosystem, 'npm');
+  assert.equal(row.affectedPackages[0].name, 'demo-package');
   assert.equal(row.kev, true);
   assert.equal(row.epss_score, 0.42);
   assert.equal('file' in row, false);
@@ -138,14 +142,12 @@ test('source checks need the current terms, for JSON and zip uploads', async () 
   assert.equal(zipNo.body.error.code, 'terms_required');
 });
 
-test('the browser engine files are served, and are the same files the server uses', async () => {
-  for (const name of ['analyze', 'rules', 'filechecks', 'paths', 'cves']) {
-    const res = await fetch(`${base}/assets/engine/${name}.js`);
-    assert.equal(res.status, 200, name);
-    assert.match(res.headers.get('content-type'), /javascript/);
+test('source detection implementation is not published as a browser asset', async () => {
+  for (const name of ['analyze', 'rules', 'filechecks', 'paths', 'flow', 'cves']) {
+    assert.equal((await fetch(`${base}/assets/engine/${name}.js`)).status, 404, name);
   }
-  assert.equal((await fetch(`${base}/assets/engine/app.js`)).status, 404);
-  assert.equal((await fetch(`${base}/assets/engine/..%2Fconfig.js`)).status, 404);
+  assert.equal((await fetch(`${base}/api/source/rules`)).status, 404);
+  assert.equal((await fetch(`${base}/assets/js/zipread.js`)).status, 404);
 });
 
 test('the CVE relay takes package names only, needs the terms, and validates input', async () => {

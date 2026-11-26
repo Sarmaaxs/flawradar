@@ -1,6 +1,4 @@
 import './components.js';
-import { analyzeFiles, ruleCatalog } from '/assets/engine/analyze.js';
-import { MANIFEST_FOR_CVE, skippedDir, skipReason } from '/assets/engine/paths.js';
 import { crossfade, stagger } from './motion.js';
 import { api, h, forgetTerms, rememberTerms, rememberedTerms, scannerInfo } from './dom.js';
 
@@ -23,19 +21,6 @@ const COLOUR = { critical: 'fail', high: 'fail', medium: 'warn', low: 'info' };
 // Limits are the same as the API's. Nothing in this page sends the code anywhere.
 // Only package names and versions go to the server, and only to look up known vulnerabilities.
 // A failed lookup becomes a note on the results instead of an error.
-function engineOptions() {
-  return {
-    maxFileBytes: limits.maxFileKb * 1024,
-    lookup: async (packages) => {
-      try {
-        return await api('/api/cves', { method: 'POST', body: JSON.stringify({ packages, terms: termsVersion }) });
-      } catch (err) {
-        return { findings: [], notices: [`Known-vulnerability lookup was skipped: ${err.message}`], checked: 0 };
-      }
-    },
-  };
-}
-
 const limits = { maxFiles: 3000, maxFileKb: 512, maxZipMb: 10, maxTotalMb: 30 };
 
 function status(message) {
@@ -60,24 +45,36 @@ async function run(files, skippedDirs) {
     return fail('Please confirm that you may check this code and accept the terms first, then drop it again.');
   }
   if (!files.length) return fail('No files were found. Drop a folder, some files, or a .zip.');
-
   const zip = files.length === 1 && /\.zip$/i.test(files[0].path) ? files[0].file : null;
   try {
     let result;
     if (zip) {
-      if (zip.size > limits.maxZipMb * 1_048_576) return fail(`That zip is ${(zip.size / 1_048_576).toFixed(1)} MB. The limit is ${limits.maxZipMb} MB. Zip only the source folders, without node_modules.`);
-      status(`Reading ${zip.name}...`);
-      const { readZip } = await import('./zipread.js');
-      const { files: inside, skipped, notices } = await readZip(zip, {
-        maxEntries: limits.maxFiles * 4,
-        maxFileBytes: limits.maxFileKb * 1024,
-        maxTotalBytes: limits.maxTotalMb * 1_048_576,
-      });
-      status(`Checking ${inside.length} files...`);
-      result = await analyzeFiles(inside, { skipped, notices, ...engineOptions() });
+      if (zip.size > limits.maxZipMb * 1_048_576) return fail(`That zip is ${(zip.size / 1_048_576).toFixed(1)} MB. The limit is ${limits.maxZipMb} MB.`);
+      status(`Uploading ${zip.name} for in-memory analysis...`);
+      result = await api('/api/source/zip', { method: 'POST', body: zip, headers: { 'Content-Type': 'application/zip', 'X-FlawRadar-Terms': termsVersion } });
     } else {
-      result = await local(files, skippedDirs);
-      if (!result) return;
+      const skipped = new Set(skippedDirs || []);
+      const skipNames = new Set(['node_modules', '.git', '.svn', '.hg', 'vendor', 'dist', 'build', '.next', '.nuxt', '.cache', '__pycache__', 'venv', '.venv', 'bower_components', 'coverage', '.idea', '.vscode', 'target']);
+      const picked = files.filter((f) => !f.path.split('/').some((part) => skipNames.has(part)));
+      if (picked.length > limits.maxFiles) return fail(`That is ${picked.length} files. The limit is ${limits.maxFiles}.`);
+      const payload = [];
+      let bytes = 0; let large = 0; let binary = 0;
+      for (let i = 0; i < picked.length; i += 1) {
+        const item = picked[i];
+        if (i % 25 === 0) status(`Reading selected files... ${i} of ${picked.length}`);
+        if (item.file.size > limits.maxFileKb * 1024) { large += 1; continue; }
+        const content = await item.file.text();
+        if (content.includes('\0')) { binary += 1; continue; }
+        bytes += content.length;
+        if (bytes > limits.maxTotalMb * 1_048_576) return fail(`That is more than ${limits.maxTotalMb} MB of source text.`);
+        payload.push({ path: item.path.replace(/^\/+/, ''), content });
+      }
+      if (!payload.length) return fail('No readable source or dependency files were found.');
+      status(`Sending ${payload.length} selected files for in-memory analysis...`);
+      result = await api('/api/source', { method: 'POST', body: JSON.stringify({ files: payload, terms: termsVersion }) });
+      if (skipped.size) result.notices.unshift(`Skipped folders: ${[...skipped].join(', ')}.`);
+      if (large) result.notices.push(`${large} oversized files were skipped.`);
+      if (binary) result.notices.push(`${binary} binary files were skipped.`);
     }
     rememberTerms(termsVersion);
     status('');
@@ -85,62 +82,6 @@ async function run(files, skippedDirs) {
   } catch (err) {
     fail(err.message || 'The check failed.');
   }
-}
-
-async function local(files, skippedDirs) {
-  const left = new Set(skippedDirs);
-  for (const f of files) {
-    const dir = skippedDir(f.path.replace(/^\/+/, ''));
-    if (dir) left.add(dir);
-  }
-  skippedDirs = [...left];
-  const clean = (f) => f.path.replace(/^\/+/, '');
-  const picked = files.filter((f) => !skipReason(clean(f)));
-  const manifests = files.filter((f) => skipReason(clean(f)) && MANIFEST_FOR_CVE.test(clean(f)) && f.file.size <= limits.maxFileKb * 1024);
-  const ignoredZips = files.filter((f) => /\.zip$/i.test(f.path)).length;
-  if (!picked.length) {
-    fail('None of those files are source code FlawRadar reads. It looks at web, script and config files such as .js, .php, .py, .html, .json and .env.');
-    return null;
-  }
-  if (picked.length > limits.maxFiles) {
-    fail(`That is ${picked.length} files. The limit is ${limits.maxFiles}. Drop only the source folders.`);
-    return null;
-  }
-
-  const payload = [];
-  let bytes = 0;
-  let large = 0;
-  let binary = 0;
-  for (let i = 0; i < picked.length; i += 1) {
-    const { path, file } = picked[i];
-    if (i % 25 === 0) status(`Reading files... ${i} of ${picked.length}`);
-    if (file.size > limits.maxFileKb * 1024) {
-      large += 1;
-      continue;
-    }
-    const content = await file.text();
-    if (content.includes('\0')) {
-      binary += 1;
-      continue;
-    }
-    bytes += content.length;
-    if (bytes > limits.maxTotalMb * 1_048_576) {
-      fail(`That is more than ${limits.maxTotalMb} MB of source text. Drop fewer folders.`);
-      return null;
-    }
-    payload.push({ path: path.replace(/^\/+/, ''), content });
-  }
-
-  // Lockfiles are skipped by the line rules but read for the known-vulnerability lookup.
-  const skipped = [];
-  for (const m of manifests) skipped.push({ path: clean(m), reason: 'generated', content: await m.file.text() });
-  status(`Checking ${payload.length} files...`);
-  const result = await analyzeFiles(payload, { skipped, ...engineOptions() });
-  if (skippedDirs.length) result.notices.unshift(`Skipped folders: ${skippedDirs.join(', ')}. Dependencies and build output are not scanned.`);
-  if (large) result.notices.push(`${large} file${large === 1 ? ' was' : 's were'} larger than ${limits.maxFileKb} KB and not read.`);
-  if (binary) result.notices.push(`${binary} binary file${binary === 1 ? ' was' : 's were'} skipped.`);
-  if (ignoredZips) result.notices.push('Zip files dropped together with other files are ignored. Drop a single .zip on its own to scan it.');
-  return result;
 }
 
 function findingNode(f) {
@@ -202,13 +143,4 @@ document.querySelectorAll('.toolbar [data-filter]').forEach((b) => {
 
 $('#drop').addEventListener('w-files', (e) => run(e.detail.files, e.detail.skippedDirs));
 
-function showRules() {
-  const rules = ruleCatalog();
-  $('#limits').textContent = `Up to ${limits.maxFiles} files, ${limits.maxFileKb} KB per file, ${limits.maxTotalMb} MB of text in total, or a zip up to ${limits.maxZipMb} MB. Folders such as node_modules, .git, vendor, dist and build are skipped.`;
-  $('#rule-count').textContent = `${rules.length} rules`;
-  $('#rules').replaceChildren(
-    h('thead', {}, h('tr', {}, h('th', {}, 'Rule'), h('th', {}, 'Severity'), h('th', {}, 'Applies to'))),
-    h('tbody', {}, ...rules.map((r) => h('tr', {}, h('td', {}, r.title), h('td', {}, r.severity), h('td', {}, r.applies)))),
-  );
-}
-showRules();
+$('#limits').textContent = `Up to ${limits.maxFiles} files, ${limits.maxFileKb} KB per file, ${limits.maxTotalMb} MB of text in total, or a zip up to ${limits.maxZipMb} MB. Common dependency and build folders are skipped.`;

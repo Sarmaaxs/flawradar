@@ -8,7 +8,7 @@ const NAV = [
   ['scan', '/', 'Scan'],
   ['whitelist', '/whitelist', 'Whitelist'],
   ['source', '/source', 'Source code'],
-  ['intel', '/intel', 'Beta'],
+  ['intel', '/intel', 'Intel'],
   ['verify', '/verify', 'Verify'],
   ['about', '/about', 'About'],
 ];

@@ -1,24 +1,289 @@
 import './components.js';
+import { api, h, scannerInfo } from './dom.js';
+
 const $ = (s) => document.querySelector(s);
-let records = []; let visible = []; let selected = null;
-const ns = 'http://www.w3.org/2000/svg';
-const node = (tag, attrs={}, text='') => { const el=document.createElementNS(ns,tag); for(const [k,v] of Object.entries(attrs)) el.setAttribute(k,String(v)); if(text) el.textContent=text; return el; };
-async function load(){ $('#intel-status').textContent='Loading…'; try { const res=await fetch('/api/intel',{headers:{Accept:'application/json'}}); if(!res.ok) throw new Error('Could not load intelligence records'); const body=await res.json(); records=Array.isArray(body.records)?body.records:[]; render(); $('#intel-status').textContent=`${records.length} cached advisory records`; } catch(e){ $('#intel-status').textContent=e.message; } }
-function render(){
- const q=$('#intel-search').value.trim().toLowerCase(); const sev=$('#intel-severity').value;
- visible=records.filter(r=>(sev==='all'||r.severity===sev)&&(!q||[r.cve_id,r.osv_id,r.summary,...(r.aliases||[]),...(r.affectedPackages||[]).map(p=>p.name)].join(' ').toLowerCase().includes(q)));
- $('#metric-total').textContent=records.length; $('#metric-critical').textContent=records.filter(r=>r.severity==='critical').length; $('#metric-kev').textContent=records.filter(r=>r.kev).length; $('#metric-epss').textContent=records.filter(r=>(r.epss_score||0)>=.1).length;
- $('#intel-empty').hidden=visible.length!==0; $('#intel-empty').textContent=records.length===0?'No vulnerability records have been cached yet. Run a source-code check with a dependency lockfile to populate the graph.':'No records match the current filters.'; const svg=$('#intel-graph'); svg.replaceChildren();
- if(!visible.length){svg.setAttribute('viewBox','0 0 1000 260');return;}
- const rowH=190; svg.setAttribute('viewBox',`0 0 1000 ${Math.max(260,visible.length*rowH)}`);
- visible.forEach((r,i)=>{
-  const y=i*rowH+55; const packages=(r.affectedPackages||[]).slice(0,3); const aliases=(r.aliases||[]).filter(a=>a!==r.cve_id).slice(0,3);
-  const addEdge=(x1,y1,x2,y2)=>svg.append(node('line',{x1,y1,x2,y2,class:'intel-edge'}));
-  packages.forEach((p,j)=>{const py=y+j*35;addEdge(255,py+13,385,y+35);const g=node('g',{class:'intel-node','data-kind':'package','data-id':r.osv_id,'aria-pressed':'false'});g.append(node('rect',{x:25,y:py,width:230,height:27,rx:3}));g.append(node('text',{x:36,y:py+18},`${p.ecosystem}: ${p.name}`));g.addEventListener('click',()=>select(r,`${p.ecosystem}: ${p.name}`));svg.append(g);});
-  aliases.forEach((a,j)=>{const ay=y+j*35;addEdge(615,y+35,745,ay+13);const g=node('g',{class:'intel-node','data-kind':'alias','data-id':r.osv_id,'aria-pressed':'false'});g.append(node('rect',{x:745,y:ay,width:230,height:27,rx:3}));g.append(node('text',{x:756,y:ay+18},a));g.addEventListener('click',()=>select(r,a));svg.append(g);});
-  const title=r.cve_id||r.osv_id; const g=node('g',{class:'intel-node','data-kind':'cve','data-severity':r.severity,'data-id':r.osv_id,'aria-pressed':'false'});g.append(node('rect',{x:385,y,width:230,height:70,rx:4}));g.append(node('text',{x:500,y:y+26,'text-anchor':'middle'},title));g.append(node('text',{x:500,y:y+47,'text-anchor':'middle'},`${String(r.severity||'unknown').toUpperCase()}${r.kev?' · KEV':''}`));g.addEventListener('click',()=>select(r,title));svg.append(g);
- });
- if(selected && visible.some(r=>r.osv_id===selected.osv_id)) select(selected,selected._label||selected.cve_id);
+const NS = 'http://www.w3.org/2000/svg';
+const state = { host: '', data: null, selected: null, zoom: 1, panX: 0, panY: 0, positions: new Map(), drag: null, moved: false };
+const svg = (tag, attrs, value) => {
+  const el = document.createElementNS(NS, tag);
+  Object.entries(attrs || {}).forEach(([k, v]) => el.setAttribute(k, String(v)));
+  if (value) el.textContent = value;
+  return el;
+};
+const el = (tag, value, cls) => {
+  const out = document.createElement(tag);
+  out.textContent = value || '';
+  if (cls) out.className = cls;
+  return out;
+};
+let termsVersion = null;
+
+function error(message) {
+  $('#intel-error').textContent = message;
+  $('#intel-error').hidden = false;
 }
-function select(r,label){selected={...r,_label:label};document.querySelectorAll('.intel-node').forEach(n=>n.setAttribute('aria-pressed',String(n.getAttribute('data-id')===r.osv_id)));const box=$('#intel-detail');box.replaceChildren();const h=document.createElement('h2');h.textContent=r.cve_id||r.osv_id;const p=document.createElement('p');p.textContent=r.summary||r.details||'No summary supplied.';const meta=document.createElement('p');meta.className='muted';meta.textContent=`${r.severity||'unknown'} · CVSS ${r.cvss_base??'—'} · EPSS ${r.epss_score==null?'—':(r.epss_score*100).toFixed(2)+'%'} · ${r.kev?'CISA KEV':'Not listed in KEV'}`;const packages=document.createElement('p');packages.textContent='Affected package records: '+(r.affectedPackages||[]).map(x=>`${x.ecosystem}:${x.name}`).join(', ');const aliases=document.createElement('p');aliases.textContent='Identifiers: '+(r.aliases||[]).join(', ');const link=document.createElement('a');link.className='button';link.href='/cve?'+new URLSearchParams({id:r.cve_id||r.osv_id,osv:r.osv_id,package:(r.affectedPackages?.[0]?.name||''),version:'see affected range',ecosystem:(r.affectedPackages?.[0]?.ecosystem||''),severity:r.severity||'unknown',summary:r.summary||'',details:r.details||'',cvss:r.cvss_vector||'',cvssBase:String(r.cvss_base??''),epss:JSON.stringify(r.epss_score==null?null:{score:r.epss_score,percentile:r.epss_percentile}),kev:JSON.stringify(r.kev?{dateAdded:r.kev_date_added,dueDate:r.kev_due_date,requiredAction:r.kev_action}:null),aliases:JSON.stringify(r.aliases||[]),refs:JSON.stringify(r.references||[]),ranges:JSON.stringify(r.affectedRanges||[]),affectedPackages:JSON.stringify(r.affectedPackages||[])});link.textContent='Open analysis';box.append(h,p,meta,packages,aliases,link);}
-$('#intel-search').addEventListener('input',render);$('#intel-severity').addEventListener('change',render);$('#intel-refresh').addEventListener('click',load);load();
+async function loadTerms() {
+  const info = await scannerInfo();
+  termsVersion = info.termsVersion;
+}
+
+$('#intel-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  $('#intel-error').hidden = true;
+  const host = $('#intel-host').value.trim();
+  if (!host) return error('Enter a domain name.');
+  if (!$('#intel-terms').checked) return error('Confirm that you own this domain or have written permission to assess it.');
+  const button = $('#intel-prepare');
+  button.disabled = true; button.textContent = 'Preparing…';
+  try {
+    await loadTerms();
+    const proof = await api('/api/verify', { method: 'POST', body: JSON.stringify({ host }) });
+    state.host = proof.host;
+    $('#intel-host').value = proof.host;
+    $('#intel-dns-name').textContent = proof.dns.name;
+    const dnsCopy = document.createElement('w-copy'); dnsCopy.id = 'intel-dns-value'; dnsCopy.textContent = proof.dns.value;
+    $('#intel-dns-value').replaceWith(dnsCopy);
+    $('#intel-file-path').textContent = proof.file.path;
+    const fileCopy = document.createElement('w-copy'); fileCopy.id = 'intel-file-value'; fileCopy.textContent = proof.file.content;
+    $('#intel-file-value').replaceWith(fileCopy);
+    $('#intel-proof').hidden = false;
+    $('#intel-proof-status').textContent = 'Add one proof method, then check it.';
+    $('#intel-results').hidden = true;
+  } catch (err) { error(err.message); }
+  finally { button.disabled = false; button.textContent = 'Prepare verification'; }
+});
+
+$('#intel-check-proof').addEventListener('click', async () => {
+  const button = $('#intel-check-proof');
+  const status = $('#intel-proof-status');
+  button.disabled = true; button.textContent = 'Checking…'; status.textContent = '';
+  try {
+    const result = await api('/api/verify/check', { method: 'POST', body: JSON.stringify({ host: state.host }) });
+    if (!result.verified) {
+      status.textContent = 'Proof not found yet. Check the DNS name/value or file path and try again.';
+      return;
+    }
+    status.textContent = 'Verified. Building the domain relationship map…';
+    const data = await api('/api/intelligence', {
+      method: 'POST',
+      body: JSON.stringify({ host: state.host, terms: termsVersion }),
+    });
+    state.data = data; state.selected = null;
+    showResults(data);
+  } catch (err) { status.textContent = err.message; }
+  finally { button.disabled = false; button.textContent = 'Check verification'; }
+});
+
+function showResults(data) {
+  $('#intel-results').hidden = false;
+  $('#intel-result-host').textContent = data.host;
+  $('#intel-generated').textContent = 'Updated ' + new Date(data.generatedAt).toLocaleString() + ' · ' + data.rootDomain;
+  $('#metric-assets').textContent = data.summary.assets;
+  $('#metric-edges').textContent = data.summary.relationships;
+  $('#metric-subdomains').textContent = data.summary.subdomains;
+  $('#metric-tech').textContent = data.summary.technologies;
+  $('#metric-cves').textContent = data.summary.vulnerabilities;
+  $('#metric-critical').textContent = data.summary.critical;
+  const types = Array.from(new Set(data.nodes.map((n) => n.type))).sort();
+  $('#intel-type').replaceChildren(new Option('All asset types', 'all'), ...types.map((t) => new Option(t.replaceAll('-', ' '), t)));
+  const legend = $('#intel-legend'); legend.replaceChildren();
+  types.forEach((t) => legend.append(h('div', { class: 'intel-legend-item' }, h('i', { class: 'legend-dot type-' + t }), t.replaceAll('-', ' '))));
+  renderGraph();
+  renderFindings();
+  const notices = $('#intel-notices'); notices.replaceChildren();
+  (data.notices || []).forEach((n) => notices.append(el('p', n, 'intel-notice')));
+  $('#intel-proof-status').textContent = 'Investigation complete.';
+  $('#intel-results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function positionsFor(nodes, edges) {
+  const root = nodes.find((n) => n.type === 'domain') || nodes[0];
+  if (!root) return new Map();
+  const adjacent = new Map(nodes.map((n) => [n.id, []]));
+  edges.forEach((e) => {
+    if (adjacent.has(e.source)) adjacent.get(e.source).push(e.target);
+    if (adjacent.has(e.target)) adjacent.get(e.target).push(e.source);
+  });
+  const depth = new Map([[root.id, 0]]), queue = [root.id];
+  while (queue.length) {
+    const id = queue.shift();
+    (adjacent.get(id) || []).forEach((next) => {
+      if (!depth.has(next)) { depth.set(next, depth.get(id) + 1); queue.push(next); }
+    });
+  }
+  const buckets = new Map();
+  nodes.filter((n) => n.id !== root.id).forEach((n) => {
+    const d = Math.min(3, depth.get(n.id) || 3);
+    if (!buckets.has(d)) buckets.set(d, []);
+    buckets.get(d).push(n);
+  });
+  const points = new Map([[root.id, { x: 600, y: 410 }]]);
+  buckets.forEach((items, d) => {
+    items.sort((a, b) => a.type.localeCompare(b.type) || a.label.localeCompare(b.label));
+    const baseRadius = d === 1 ? 230 : d === 2 ? 460 : 690;
+    items.forEach((item, i) => {
+      const ring = Math.floor(i / 12);
+      const slot = i % 12;
+      const radius = baseRadius + ring * 145;
+      const angle = Math.PI * 2 * slot / Math.min(12, items.length - ring * 12) - Math.PI / 2;
+      points.set(item.id, { x: 600 + Math.cos(angle) * radius, y: 410 + Math.sin(angle) * radius });
+    });
+  });
+  return points;
+}
+
+function visibleNodes() {
+  const query = $('#intel-search').value.trim().toLowerCase();
+  const type = $('#intel-type').value;
+  const severity = $('#intel-severity').value;
+  return state.data.nodes.filter((n) =>
+    (type === 'all' || n.type === type) &&
+    (severity === 'all' || n.severity === severity) &&
+    (!query || [n.label, n.detail, n.id, n.source].join(' ').toLowerCase().includes(query)));
+}
+
+function renderGraph() {
+  if (!state.data) return;
+  const rootSvg = $('#intel-graph'); rootSvg.replaceChildren();
+  const nodes = state.data.nodes;
+  const shown = new Set(visibleNodes().map((n) => n.id));
+  if (state.positions.size !== nodes.length) state.positions = positionsFor(nodes, state.data.edges);
+  const points = state.positions;
+  const extent = Math.max(600, ...[...points.values()].map((p) => Math.max(Math.abs(p.x - 600), Math.abs(p.y - 410)))) + 130;
+  const width = Math.max(1200, extent * 2.15) / state.zoom;
+  const height = width * 820 / 1200;
+  rootSvg.setAttribute('viewBox', (600 + state.panX - width / 2) + ' ' + (410 + state.panY - height / 2) + ' ' + width + ' ' + height);
+  const scene = svg('g', { id: 'graph-scene' });
+  state.data.edges.forEach((edge) => {
+    if (!shown.has(edge.source) || !shown.has(edge.target)) return;
+    const a = points.get(edge.source), b = points.get(edge.target);
+    if (!a || !b) return;
+    scene.append(svg('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'intel-edge' }));
+    scene.append(svg('text', { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - 5, class: 'intel-edge-label', 'text-anchor': 'middle' }, edge.relation));
+  });
+  nodes.forEach((item) => {
+    if (!shown.has(item.id)) return;
+    const p = points.get(item.id); if (!p) return;
+    const isRoot = item.type === 'domain';
+    const w = isRoot ? 190 : Math.max(116, Math.min(190, item.label.length * 7 + 28));
+    const heightNode = isRoot ? 58 : 44;
+    const group = svg('g', { class: 'intel-graph-node type-' + item.type + (item.severity !== 'info' ? ' severity-' + item.severity : ''), 'data-id': item.id, tabindex: '0', role: 'button' });
+    group.append(svg('rect', { x: p.x - w / 2, y: p.y - heightNode / 2, width: w, height: heightNode, rx: 5, class: 'node-box' }));
+    group.append(svg('text', { x: p.x, y: p.y - 2, 'text-anchor': 'middle', class: 'node-title' }, item.label.length > 26 ? item.label.slice(0, 24) + '…' : item.label));
+    group.append(svg('text', { x: p.x, y: p.y + 14, 'text-anchor': 'middle', class: 'node-type' }, item.type.replaceAll('-', ' ')));
+    const choose = () => selectNode(item);
+    group.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) return;
+      state.drag = { id: item.id, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY };
+      state.moved = false;
+      rootSvg.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+    group.addEventListener('click', () => { if (!state.moved) choose(); });
+    group.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(); } });
+    scene.append(group);
+  });
+  rootSvg.append(scene);
+  $('#intel-map-status').textContent = shown.size + ' visible of ' + nodes.length + ' assets · ' + state.data.edges.length + ' relationships';
+  if (state.selected && shown.has(state.selected.id)) selectNode(state.selected);
+}
+
+function selectNode(item) {
+  state.selected = item;
+  document.querySelectorAll('.intel-graph-node').forEach((n) => n.classList.toggle('selected', n.dataset.id === item.id));
+  const panel = $('#intel-detail'); panel.replaceChildren();
+  panel.append(el('h4', item.label));
+  panel.append(el('p', item.detail || 'No additional details.'));
+  panel.append(el('p', 'Type: ' + item.type + ' · Confidence: ' + item.confidence + ' · Source: ' + item.source, 'muted'));
+  if (item.severity !== 'info') panel.append(el('p', 'Severity: ' + item.severity.toUpperCase(), 'severity-label severity-' + item.severity));
+  if (item.type === 'cve') {
+    const m = item.meta || {};
+    const params = new URLSearchParams({
+      id: item.label, osv: m.osvId || '', package: m.package || '', version: m.version || '',
+      ecosystem: m.ecosystem || 'npm', severity: item.severity, summary: item.detail, fix: m.fix || '', details: m.details || '',
+      cvss: m.cvss || '', cvssBase: String(m.cvssBaseScore ?? ''), published: m.published || '', modified: m.modified || '',
+      affectedPackages: JSON.stringify(m.affectedPackages || []), epss: JSON.stringify(m.epss || null),
+      kev: JSON.stringify(m.kev || null), refs: JSON.stringify(m.references || []),
+      ranges: JSON.stringify(m.affectedRanges || []), aliases: JSON.stringify(m.aliases || []),
+    });
+    panel.append(h('a', { class: 'button', href: '/cve?' + params.toString() }, 'Open CVE analysis'));
+  }
+  if (item.href) panel.append(h('p', {}, h('a', { href: item.href, target: '_blank', rel: 'noopener noreferrer' }, 'Open public source')));
+  if (item.meta && item.meta.fix) panel.append(el('p', 'Developer action: ' + item.meta.fix));
+}
+
+function renderFindings() {
+  const list = $('#intel-findings-list'); list.replaceChildren();
+  const order = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+  const findings = state.data.nodes.filter((n) => n.type === 'finding' || n.type === 'cve').sort((a, b) => order[a.severity] - order[b.severity]);
+  if (!findings.length) { list.append(el('p', 'No baseline findings or version-specific CVEs were identified. This is not proof of security.', 'intel-empty')); return; }
+  findings.forEach((item) => {
+    const card = h('article', { class: 'intel-finding severity-' + item.severity });
+    card.append(h('div', { class: 'intel-finding-head' }, h('strong', {}, item.label), h('span', { class: 'severity-label severity-' + item.severity }, item.severity.toUpperCase())));
+    card.append(el('p', item.detail));
+    const locate = h('button', { type: 'button', class: 'small secondary' }, 'Locate in map');
+    locate.addEventListener('click', () => {
+      $('#intel-search').value = item.label; $('#intel-type').value = 'all'; $('#intel-severity').value = 'all';
+      renderGraph(); selectNode(item);
+    });
+    card.append(locate);
+    if (item.type === 'cve') {
+      const m = item.meta || {};
+      const params = new URLSearchParams({
+        id: item.label, osv: m.osvId || '', package: m.package || '', version: m.version || '',
+        ecosystem: m.ecosystem || 'npm', severity: item.severity, summary: item.detail,
+        fix: m.fix || '', details: m.details || '', cvss: m.cvss || '', cvssBase: String(m.cvssBaseScore ?? ''),
+        published: m.published || '', modified: m.modified || '', affectedPackages: JSON.stringify(m.affectedPackages || []),
+        epss: JSON.stringify(m.epss || null), kev: JSON.stringify(m.kev || null),
+        refs: JSON.stringify(m.references || []), ranges: JSON.stringify(m.affectedRanges || []), aliases: JSON.stringify(m.aliases || []),
+      });
+      card.append(h('a', { href: '/cve?' + params.toString() }, 'Read advisory'));
+    }
+    list.append(card);
+  });
+}
+
+$('#intel-search').addEventListener('input', renderGraph);
+$('#intel-type').addEventListener('change', renderGraph);
+$('#intel-severity').addEventListener('change', renderGraph);
+$('#intel-zoom-in').addEventListener('click', () => { state.zoom = Math.min(2.4, state.zoom * 1.2); renderGraph(); });
+$('#intel-zoom-out').addEventListener('click', () => { state.zoom = Math.max(.65, state.zoom / 1.2); renderGraph(); });
+$('#intel-fit').addEventListener('click', () => { state.zoom = 1; state.panX = 0; state.panY = 0; renderGraph(); });
+const mapSvg = $('#intel-graph');
+mapSvg.addEventListener('pointermove', (event) => {
+  if (!state.drag) return;
+  const rect = mapSvg.getBoundingClientRect();
+  const view = mapSvg.viewBox.baseVal;
+  if (state.drag.id === '__pan__') {
+    state.panX -= (event.clientX - state.drag.startX) / rect.width * view.width;
+    state.panY -= (event.clientY - state.drag.startY) / rect.height * view.height;
+    state.drag.startX = event.clientX; state.drag.startY = event.clientY; renderGraph(); return;
+  }
+  const dx = (event.clientX - state.drag.startX) / rect.width * view.width;
+  const dy = (event.clientY - state.drag.startY) / rect.height * view.height;
+  if (Math.abs(dx) + Math.abs(dy) > 2) state.moved = true;
+  const point = state.positions.get(state.drag.id);
+  if (point) { state.positions.set(state.drag.id, { x: point.x + dx, y: point.y + dy }); state.drag.startX = event.clientX; state.drag.startY = event.clientY; renderGraph(); }
+});
+mapSvg.addEventListener('pointerup', () => { state.drag = null; });
+mapSvg.addEventListener('pointercancel', () => { state.drag = null; });
+mapSvg.addEventListener('pointerdown', (event) => {
+  if (event.target.closest('.intel-graph-node')) return;
+  if (event.button !== 0) return;
+  state.drag = { id: '__pan__', pointerId: event.pointerId, startX: event.clientX, startY: event.clientY };
+  mapSvg.setPointerCapture(event.pointerId);
+});
+$('#intel-new').addEventListener('click', () => {
+  state.data = null; state.selected = null; state.positions.clear(); state.panX = 0; state.panY = 0; state.zoom = 1;
+  $('#intel-results').hidden = true; $('#intel-proof').hidden = true;
+  $('#intel-host').value = ''; $('#intel-terms').checked = false;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+$('#intel-export').addEventListener('click', () => {
+  if (!state.data) return;
+  const blob = new Blob([JSON.stringify(state.data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'flawradar-' + state.host + '-intelligence.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+loadTerms().catch((err) => error(err.message));

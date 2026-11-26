@@ -12,9 +12,11 @@ import { startScan } from './scans.js';
 import * as watch from './watch.js';
 import { checkOwnership, instructions } from './verify.js';
 import { checkAllow } from './allow.js';
-import { analyzeFiles, ruleCatalog } from './source/analyze.js';
+import { analyzeFiles } from './source/analyze.js';
 import { lookupCves } from './source/cves.js';
 import { readZip } from './source/zip.js';
+import { runScan } from './scanner/scan.js';
+import { runDomainIntelligence } from './scanner/intelligence.js';
 
 const PUBLIC = path.join(config.root, 'public');
 const ID = '[a-f0-9]{24}';
@@ -23,6 +25,7 @@ const scanLimiter = new Limiter({ limit: config.scansPerHour, windowMs: 3_600_00
 const verifyLimiter = new Limiter({ limit: config.verifyChecksPerHour, windowMs: 3_600_000 });
 const watchLimiter = new Limiter({ limit: config.watchSignupsPerHour, windowMs: 3_600_000 });
 const sourceLimiter = new Limiter({ limit: config.sourcePerHour, windowMs: 3_600_000 });
+const intelligenceLimiter = new Limiter({ limit: 2, windowMs: 3_600_000 });
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -41,6 +44,7 @@ const PAGES = {
   '/source': 'source.html',
   '/cve': 'cve.html',
   '/intel': 'intel.html',
+  '/intelligence': 'intel.html',
   '/about': 'about.html',
   '/terms': 'terms.html',
   '/acceptable-use': 'acceptable-use.html',
@@ -195,14 +199,6 @@ function shapeScan(row) {
   };
 }
 
-function sourceLimits() {
-  return {
-    maxFiles: config.maxSourceFiles,
-    maxFileKb: Math.round(config.maxFileBytes / 1024),
-    maxZipMb: Math.round(config.maxZipBytes / 1_048_576),
-    maxTotalMb: Math.round(config.maxSourceTotalBytes / 1_048_576),
-  };
-}
 
 // People must confirm authorization and accept the current terms before anything is scanned.
 // The client sends the version it showed them; a stale page is refused so it cannot accept old text.
@@ -257,8 +253,30 @@ const api = {
     });
   },
 
-  intel(req, res) {
-    sendJson(res, 200, { records: db.recentCveIntel(120) });
+
+
+  async domainIntelligence(req, res) {
+    const hit = intelligenceLimiter.hit(clientIp(req));
+    if (!hit.ok) throw new AppError(429, 'rate_limited', 'Too many domain investigations. Try again later.', { retryAfter: hit.retryAfter });
+    const body = await readJson(req, 8192);
+    requireTerms(body.terms);
+    const target = parseTarget(body.host);
+    await resolvePublic(target.host);
+    const proof = await checkOwnership(target);
+    if (!proof.verified) {
+      throw new AppError(403, 'needs_verification', 'Verify control of this exact host before running domain intelligence.', { verifyUrl: `/verify?host=${encodeURIComponent(target.host)}` });
+    }
+    const pageEvidence = [];
+    let robotsInfo = null;
+    const baseline = await runScan(target, {
+      deep: false,
+      onPage: (page) => pageEvidence.push(page),
+      onRobots: (info) => { robotsInfo = info; },
+    });
+    const result = await runDomainIntelligence(target, { baseScan: baseline, pages: pageEvidence, robotsInfo });
+    db.storeCveIntel(result.cveFindings || []);
+    delete result.cveFindings;
+    sendJson(res, 200, result);
   },
 
   async createScan(req, res) {
@@ -371,9 +389,7 @@ const api = {
     sendText(res, 200, text, { 'Content-Disposition': `attachment; filename="flawradar-${server}.${ext}"` });
   },
 
-  sourceRules(req, res) {
-    sendJson(res, 200, { rules: ruleCatalog(), limits: sourceLimits() });
-  },
+
 
   // Source code arrives as JSON: { files: [{ path, content }] }. It is analysed
   // in memory and thrown away. Nothing about it is stored.
@@ -402,9 +418,7 @@ const api = {
     sendJson(res, 200, await analyzeFiles(files, { maxFileBytes: config.maxFileBytes }));
   },
 
-  // The browser checks the code itself. For the vulnerability lookup it sends only package names and
-  // versions (no code) and this relays them to OSV, because the page's security policy does not let
-  // it talk to other sites.
+  // Package-only advisory relay. The source-analysis engine itself runs server-side.
   async cves(req, res) {
     limitSource(req);
     const body = await readJson(req, 256 * 1024);
@@ -465,12 +479,11 @@ const api = {
 const routes = [
   ['GET', /^\/api\/health$/, api.health],
   ['GET', /^\/api\/scanner$/, api.scanner],
-  ['GET', /^\/api\/intel$/, api.intel],
+  ['POST', /^\/api\/intelligence$/, api.domainIntelligence],
   ['POST', /^\/api\/scans$/, api.createScan],
   ['GET', new RegExp(`^/api/scans/(${ID})$`), api.getScan],
   ['DELETE', new RegExp(`^/api/scans/(${ID})$`), api.deleteScan],
   ['GET', new RegExp(`^/api/scans/(${ID})/fix$`), api.fix],
-  ['GET', /^\/api\/source\/rules$/, api.sourceRules],
   ['POST', /^\/api\/source$/, api.source],
   ['POST', /^\/api\/source\/zip$/, api.sourceZip],
   ['POST', /^\/api\/cves$/, api.cves],
@@ -509,10 +522,6 @@ async function route(req, res) {
   if (new RegExp(`^/report/${ID}$`).test(pathname)) {
     return serveFile(req, res, 'report.html', { cache: 'no-cache', extra: { 'X-Robots-Tag': 'noindex' } });
   }
-  // The source checker runs in the browser. It loads the very same rule files the server uses,
-  // so the two cannot drift apart.
-  const engine = pathname.match(/^\/assets\/engine\/(analyze|rules|filechecks|paths|cves|flow)\.js$/);
-  if (engine) return serveFile(req, res, `${engine[1]}.js`, { root: path.join(config.root, 'server', 'source') });
   if (pathname === '/robots.txt') return serveFile(req, res, 'robots.txt');
   if (pathname.startsWith('/assets/')) {
     let decoded;
