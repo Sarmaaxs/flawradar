@@ -74,6 +74,27 @@ export const config = {
   maxPageBytes: 750_000,
   scanTimeoutMs: 90_000,
 
+  // Scheduled rescans and email alerts; disabled unless SMTP is configured.
+  mail: {
+    enabled: Boolean(envGet('SMTP_HOST')),
+    host: envGet('SMTP_HOST') || '',
+    port: num(envGet('SMTP_PORT'), 587),
+    secure: envGet('SMTP_SECURE') || (num(envGet('SMTP_PORT'), 587) === 465 ? 'tls' : 'starttls'),
+    user: envGet('SMTP_USER') || '',
+    pass: envGet('SMTP_PASS') || '',
+    from: envGet('SMTP_FROM') || '',
+  },
+  watchIntervalHours: num(envGet('WATCH_INTERVAL_HOURS'), 24),
+  maxWatchesPerEmail: num(envGet('MAX_WATCHES_PER_EMAIL'), 5),
+  watchSignupsPerHour: num(envGet('WATCH_SIGNUPS_PER_HOUR'), 6),
+
+  // Automatic database copies; disabled when no directory is configured.
+  backup: {
+    dir: envGet('BACKUP_DIR') || '',
+    keep: num(envGet('BACKUP_KEEP'), 7),
+    intervalHours: num(envGet('BACKUP_INTERVAL_HOURS'), 24),
+  },
+
   // Hosts whose owners asked not to be scanned (see the Acceptable Use Policy). A listed
   // name also covers its subdomains. Comma separated, applied after a restart.
   blockedHosts: list(envGet('BLOCKED_HOSTS')).map((h) => h.toLowerCase().replace(/^\.+|\.+$/g, '')),
@@ -96,6 +117,19 @@ export const config = {
   },
 };
 
+export const isLocalUrl = (value) => {
+  try {
+    const host = new URL(value).hostname.toLowerCase();
+    return host === 'localhost' || host.endsWith('.localhost') ||
+      host === '127.0.0.1' || host === '0.0.0.0' || host === '[::1]' || host === '::1';
+  } catch {
+    return true;
+  }
+};
+
+/** Never publish a local development URL in scanner identification. */
 export function userAgent() {
-  return `FlawRadar-Scanner/${config.version} (+${config.baseUrl}/whitelist)`;
+  return isLocalUrl(config.baseUrl)
+    ? `FlawRadar-Scanner/${config.version}`
+    : `FlawRadar-Scanner/${config.version} (+${config.baseUrl}/whitelist)`;
 }

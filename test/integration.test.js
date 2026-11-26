@@ -9,6 +9,7 @@ process.env.FLAWRADAR_QUIET = '1';
 process.env.FLAWRADAR_SCANS_PER_HOUR = '500';
 process.env.FLAWRADAR_SCANS_PER_HOST_PER_HOUR = '500';
 process.env.FLAWRADAR_PUBLIC_IPS = '203.0.113.10,2001:db8::10';
+process.env.FLAWRADAR_BASE_URL = 'https://radar.example';
 
 const { createServer } = await import('../server/app.js');
 const { config } = await import('../server/config.js');

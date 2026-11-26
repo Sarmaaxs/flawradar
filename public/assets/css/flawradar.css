@@ -17,6 +17,13 @@
   --serif: Georgia, "Times New Roman", Times, serif;
   --sans: Verdana, Tahoma, Geneva, sans-serif;
   --mono: "Courier New", Courier, monospace;
+  --d-fast: 120ms;
+  --d-base: 240ms;
+  --d-slow: 420ms;
+  --d-slower: 700ms;
+  --ease-standard: cubic-bezier(.4, 0, .2, 1);
+  --ease-decel: cubic-bezier(0, 0, .2, 1);
+  --ease-emph: cubic-bezier(.2, 0, 0, 1);
 }
 
 * { box-sizing: border-box; }
@@ -247,4 +254,12 @@ ol.plain li { margin: .4rem 0; }
   .row { flex-direction: column; }
   .finding > summary { grid-template-columns: 1fr; gap: .1rem; }
   h1 { font-size: 1.55rem; }
+}
+/* ---- Motion. Respect the operating system's reduced-motion preference. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  ::view-transition-old(root) { animation: var(--d-base) var(--ease-standard) both fade-out; }
+  ::view-transition-new(root) { animation: var(--d-slow) var(--ease-decel) both fade-in; }
+  @keyframes fade-out { to { opacity: 0; } }
+  @keyframes fade-in { from { opacity: 0; } }
 }
