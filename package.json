@@ -10,6 +10,8 @@
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning server/index.js",
     "dev": "node --disable-warning=ExperimentalWarning --watch server/index.js",
+    "check": "node --disable-warning=ExperimentalWarning server/check.js",
+    "backup": "node --disable-warning=ExperimentalWarning server/backup-now.js",
     "test": "node --disable-warning=ExperimentalWarning --test"
   },
   "license": "UNLICENSED"
