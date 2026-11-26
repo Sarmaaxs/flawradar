@@ -220,7 +220,8 @@ export async function runCveChecks(files, opts = {}) {
   if (!packages.length) {
     return { findings: [], notices: collectNotices, checked: 0, packages: 0 };
   }
-  const { findings, notices: lookupNotices, checked } = await lookupCves(packages, opts);
+  const lookup = opts.lookup || lookupCves; // the browser passes a function that asks the server
+  const { findings, notices: lookupNotices, checked } = await lookup(packages, opts);
   return {
     findings,
     notices: [...collectNotices, ...lookupNotices],

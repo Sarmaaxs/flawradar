@@ -9,10 +9,10 @@ process.env.FLAWRADAR_QUIET = '1';
 process.env.FLAWRADAR_SCANS_PER_HOUR = '500';
 process.env.FLAWRADAR_SCANS_PER_HOST_PER_HOUR = '500';
 process.env.FLAWRADAR_PUBLIC_IPS = '203.0.113.10,2001:db8::10';
-process.env.FLAWRADAR_BASE_URL = 'https://radar.example';
 
 const { createServer } = await import('../server/app.js');
 const { config } = await import('../server/config.js');
+const TERMS = config.termsVersion;
 const { parseTarget } = await import('../server/scanner/net.js');
 const db = await import('../server/db.js');
 
@@ -121,10 +121,9 @@ const json = async (path, options = {}) => {
 };
 
 const post = (path, data) => json(path, { method: 'POST', body: JSON.stringify(data) });
-const terms = config.termsVersion;
 
 async function scan(url, deep = false) {
-  const created = await post('/api/scans', { url, deep, terms });
+  const created = await post('/api/scans', { url, deep, terms: TERMS });
   assert.equal(created.status, 202, JSON.stringify(created.body));
   for (let i = 0; i < 100; i += 1) {
     const { body } = await json(`/api/scans/${created.body.id}`);
@@ -156,7 +155,7 @@ test('scanning a badly configured site finds the problems', async () => {
 
 test('deep scans are refused until ownership is proved, then find exposed files', async () => {
   const host = `127.0.0.1`;
-  const refused = await post('/api/scans', { url: `http://${host}:${weakPort}`, deep: true, terms });
+  const refused = await post('/api/scans', { url: `http://${host}:${weakPort}`, deep: true, terms: TERMS });
   assert.equal(refused.status, 403);
   assert.equal(refused.body.error.code, 'needs_verification');
   assert.ok(refused.body.error.tried.length >= 1);
@@ -191,7 +190,7 @@ test('deep scans are refused until ownership is proved, then find exposed files'
 
   // Taking the proof down withdraws permission.
   proofValue = null;
-  const withdrawn = await post('/api/scans', { url: `http://${host}:${weakPort}`, deep: true, terms });
+  const withdrawn = await post('/api/scans', { url: `http://${host}:${weakPort}`, deep: true, terms: TERMS });
   assert.equal(withdrawn.status, 403);
 });
 
@@ -229,7 +228,7 @@ test('later scans of a host show the previous result', async () => {
 
 test('api input handling', async () => {
   assert.equal((await post('/api/scans', {})).status, 400);
-  assert.equal((await post('/api/scans', { url: 'ftp://x.example.com' })).status, 400);
+  assert.equal((await post('/api/scans', { url: 'ftp://x.example.com', terms: TERMS })).status, 400);
   const notJson = await json('/api/scans', { method: 'POST', body: 'url=example.com', headers: { 'Content-Type': 'text/plain' } });
   assert.equal(notJson.status, 415);
   const badJson = await json('/api/scans', { method: 'POST', body: '{nope', headers: { 'Content-Type': 'application/json' } });
@@ -246,7 +245,9 @@ test('api input handling', async () => {
 test('scanner details come from configuration', async () => {
   const { body } = await json('/api/scanner');
   assert.deepEqual(body.ips, ['203.0.113.10', '2001:db8::10']);
-  assert.match(body.userAgent, /^FlawRadar-Scanner\/[\d.]+ \(\+.+\/whitelist\)$/);
+  // With no public address configured, the user agent carries no link rather than a local one.
+  assert.match(body.userAgent, /^FlawRadar-Scanner\/[\d.]+$/);
+  assert.equal(body.baseUrl, null);
 });
 
 test('pages and assets are served with security headers', async () => {
@@ -295,4 +296,17 @@ test('parseTarget in development mode allows IPs and ports', () => {
   const t = parseTarget('http://127.0.0.1:8080');
   assert.equal(t.host, '127.0.0.1');
   assert.equal(t.port, 8080);
+});
+
+test('scans need the current terms to be accepted, and the version is recorded', async () => {
+  for (const terms of [undefined, true, 'old-version', '']) {
+    const r = await post('/api/scans', { url: `http://127.0.0.1:${weakPort}`, terms });
+    assert.equal(r.status, 400, String(terms));
+    assert.equal(r.body.error.code, 'terms_required');
+  }
+  const report = await scan(`http://127.0.0.1:${weakPort}`);
+  assert.equal(db.getScan(report.id).terms_version, TERMS);
+  const info = (await json('/api/scanner')).body;
+  assert.equal(info.termsVersion, TERMS);
+  assert.ok('entity' in info.legal && 'law' in info.legal && info.limits.retentionDays > 0);
 });

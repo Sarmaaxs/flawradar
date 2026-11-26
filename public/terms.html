@@ -21,10 +21,13 @@
 
   <ol class="toc">
     <li><a href="#agreement">Agreement to These Terms</a></li>
+    <li><a href="#eligibility">Eligibility</a></li>
     <li><a href="#service">The Service</a></li>
     <li><a href="#authorization">Authorization and Ownership</a></li>
     <li><a href="#use">Acceptable Use</a></li>
     <li><a href="#impact">How Scans Behave and Your Responsibility for Their Effects</a></li>
+    <li><a href="#misuse">Computer Misuse Laws and Legal Requests</a></li>
+    <li><a href="#findings">Security Findings and Third Parties</a></li>
     <li><a href="#reports">Reports and No Professional Advice</a></li>
     <li><a href="#warranty">No Warranty ("As Is")</a></li>
     <li><a href="#liability">Limitation of Liability</a></li>
@@ -44,8 +47,12 @@
   <div class="c">We record the version of the Terms you accepted together with each scan you start. You may be asked to accept again when the Terms change.</div>
   <div class="c">In these Terms: a <b>"Target"</b> is any website, host name, IP address, server, application or network that you ask FlawRadar to examine; <b>"Source Code"</b> is any files you upload to the Service for checking; a <b>"Report"</b> is any result, score, finding, explanation or configuration the Service produces; and the <b>"Scanner Addresses"</b> are the IP addresses published on the <a href="/whitelist">Whitelist page</a>.</div>
 
+  <h2 id="eligibility">Eligibility</h2>
+  <div class="c">You must be at least 18 years old, or of full age to make a binding contract where you live, to use the Service. If you use it for a company or other organization, you confirm that you have the authority to bind it, and "you" includes that organization.</div>
+  <div class="c">You may not use the Service if the law of the place where you are, or the place where the Target is, forbids it, or if you have been barred from it by us.</div>
+
   <h2 id="service">The Service</h2>
-  <div class="c">FlawRadar examines the externally visible security settings of a Target (such as TLS certificates, HTTP headers, cookies, DNS records and publicly reachable files) and analyses Source Code you upload for common security mistakes. It produces Reports with suggested fixes. Some checks, called "deep checks", request files that should not be public and run only after you prove control of the Target as described on the <a href="/verify">Verify page</a>.</div>
+  <div class="c">FlawRadar examines the externally visible security settings of a Target (such as TLS certificates, HTTP headers, cookies, DNS records and publicly reachable files) and analyses Source Code you choose for common security mistakes. The source check runs in your browser and does not send the Source Code to the Service. It produces Reports with suggested fixes. You may also set up a "watch", which repeats the normal scan on a schedule for a Target whose control you have proved and emails you when the result gets worse; a watch can be stopped at any time with the link in each email. Some checks, called "deep checks", request files that should not be public and run only after you prove control of the Target as described on the <a href="/verify">Verify page</a>.</div>
   <div class="c">The Service does not require an account. We may add, change, limit or remove features, checks, rules, rate limits and file-size limits at any time. We do not promise that the Service will be available, uninterrupted, timely or free of errors.</div>
   <div class="c">The Service is provided free of charge unless we tell you otherwise in writing before you use a paid feature. If fees are introduced, they will be shown to you before you are charged.</div>
 
@@ -55,7 +62,7 @@
     <ul>
       <li>you own the Target or Source Code, or hold the permission described above, and you can show that permission on request;</li>
       <li>your use of the Service is lawful where you are, where the Target is, and where the Service is operated, including laws on unauthorized access to computer systems;</li>
-      <li>you have the right to upload the Source Code and to allow us to process it for the purpose of producing your Report, and doing so does not breach a licence, a confidentiality duty, or the rights of any third party;</li>
+      <li>you have the right to have the Source Code checked, and doing so does not breach a licence, a confidentiality duty, or the rights of any third party;</li>
       <li>the Source Code does not contain personal data, credentials or secrets belonging to others that you have no right to share; and</li>
       <li>every statement you make to the Service, including any ownership proof, is true.</li>
     </ul>
@@ -71,6 +78,16 @@
   <div class="c">FlawRadar sends a small number of read-only requests (mainly GET, HEAD and one OPTIONS request), opens a TLS connection and makes DNS queries. It does not submit forms, log in or try passwords. Requests identify themselves with a FlawRadar user agent and come from the Scanner Addresses.</div>
   <div class="c">Even light requests can be logged, can trigger alerts, can be blocked by firewalls or rate limiters, and in rare cases can affect fragile or misconfigured systems. You accept those risks. You are responsible for the effect of a scan on the Target and for any consequences of an alert or block, including costs, downtime and claims by others.</div>
   <div class="c">We design the Service to be gentle, but we do not guarantee that a scan will not disrupt a Target.</div>
+
+  <h2 id="misuse">Computer Misuse Laws and Legal Requests</h2>
+  <div class="c">Many countries make it a crime to access, probe or test a computer system without the owner's permission. Examples are the United States Computer Fraud and Abuse Act, the United Kingdom Computer Misuse Act 1990, and the computer crime laws of other countries, including the law of the place where you live. Using the Service on a Target you are not authorized to test may break these laws. The Service does not give you permission to test anything, and using the Service is not a defense. You alone are responsible for making sure you are authorized.</div>
+  <div class="c">We may report suspected unlawful or abusive use to the owner of the Target, to the provider that hosts it, and to the authorities. We may answer lawful requests from courts, police and other authorities, and may share the information we hold (such as the host name, the time of a scan, the accepted version of these Terms and, for a watch, the email address) where the law requires it or where it is needed to protect our rights, our users or the public. We tell you about such a request unless the law forbids it or it would be unsafe.</div>
+  <div class="c">Each scan record includes the version of these Terms that was accepted when it was started. You agree that this record may be used as evidence that the request was made and the confirmation was given.</div>
+
+  <h2 id="findings">Security Findings and Third Parties</h2>
+  <div class="c">If the Service shows you a weakness in a system that you do not own, you must not use it to get into that system, to read or change its data, or to disrupt it, and you must not demand payment or other benefits for keeping quiet about it. If you want to report a weakness to its owner, do so responsibly and in private.</div>
+  <div class="c">The Service uses outside sources, such as the public DNS and the OSV vulnerability database, and may link to other sites. We do not control them, we are not responsible for their content, accuracy or availability, and a link is not an endorsement.</div>
+  <div class="c">Changing the configuration of a live system can make it stop working. Before you apply any suggested fix, test it, keep a backup, and make sure you understand it. You are responsible for the changes you make.</div>
 
   <h2 id="reports">Reports and No Professional Advice</h2>
   <div class="c">Reports are <b>informational only</b>. They are produced automatically from a limited set of checks at a single moment. They may contain false positives (reporting a problem that is not one) and false negatives (missing a real problem), and they may become wrong as soon as the Target or the Service changes.</div>

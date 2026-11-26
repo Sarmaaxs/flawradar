@@ -16,7 +16,7 @@
   <p class="doc-meta">Version <span class="fill unset" data-legal="termsVersion">[VERSION]</span>. This policy is part of the <a href="/terms">Terms of Service</a>.</p>
 
   <div class="summary-box">
-    <b>In short.</b> FlawRadar has no accounts, sets no cookies and has no analytics or advertising. Scan reports are kept for a limited time and then deleted. Your IP address is used in memory for rate limiting and is not saved to the database. Source code you upload is analysed in memory and is not stored.
+    <b>In short.</b> FlawRadar has no accounts, sets no cookies and has no analytics or advertising. Scan reports are kept for a limited time and then deleted. Your IP address is used in memory for rate limiting and is not saved to the database. Source code you drop on the source page is checked in your browser and is not sent to us; only the package names and versions from a lockfile are sent, to look up known vulnerabilities.
   </div>
 
   <ol class="toc">
@@ -24,6 +24,7 @@
     <li><a href="#data">Data Handling, Logs and Retention</a></li>
     <li><a href="#targets">Information About the Websites You Scan</a></li>
     <li><a href="#source">Uploaded Source Code</a></li>
+    <li><a href="#watches">Watches (scheduled scans and email alerts)</a></li>
     <li><a href="#use">How We Use Data</a></li>
     <li><a href="#basis">Legal Bases</a></li>
     <li><a href="#sharing">Who Can See Data</a></li>
@@ -53,15 +54,21 @@
           <td>Deleted automatically after <span class="fill" data-legal="retentionDays">30</span> days. The deletion job runs hourly.</td>
         </tr>
         <tr>
+          <td><b>Watch sign-up.</b> Host name, email address, secret, times and last grade.</td>
+          <td>To run scheduled scans and send the alerts you asked for.</td>
+          <td>Stored in the Service's database. Not shared, except with the email delivery provider.</td>
+          <td>Until you stop the watch, or two days if it is never confirmed.</td>
+        </tr>
+        <tr>
           <td><b>Your IP address.</b></td>
           <td>Rate limiting and abuse prevention.</td>
-          <td>Held in the server's memory only, to count requests within a rolling one-hour window. It is not written to the database and is not part of the scan record.</td>
-          <td>Up to one hour, and cleared when the server restarts.</td>
+          <td>Held in the Service's memory only, to count requests within a rolling one-hour window. It is not written to the database and is not part of the scan record.</td>
+          <td>Up to one hour, and cleared when the Service restarts.</td>
         </tr>
         <tr>
           <td><b>Application log.</b> One line per request with the method, the path (without the query string), the status code and the time taken. It does not contain IP addresses, request bodies, uploaded files or scan results.</td>
           <td>Running and fixing the Service.</td>
-          <td>Written to the server's log output and kept by the hosting environment.</td>
+          <td>Written to the Service's logs and kept by the hosting provider.</td>
           <td>As set by the host: <span class="fill unset" data-legal="logRetention">[LOG RETENTION PERIOD]</span>.</td>
         </tr>
         <tr>
@@ -71,10 +78,10 @@
           <td>As set by that provider and described above.</td>
         </tr>
         <tr>
-          <td><b>Uploaded source code.</b></td>
-          <td>To produce the source code Report.</td>
-          <td>No. It is read from the request, analysed in memory and discarded. It is not written to disk, not logged and not kept in any report.</td>
-          <td>Only for the seconds the check takes.</td>
+          <td><b>Source code you check on the source page.</b></td>
+          <td>To show you the results of the source check, on your own device.</td>
+          <td>Your code is not sent to us. The check runs in your browser. Only package names and versions from a lockfile are sent, to look up known vulnerabilities, and are not stored. (Code sent straight to the Service's API, not through the source page, is read in memory and discarded.)</td>
+          <td>We do not hold it.</td>
         </tr>
         <tr>
           <td><b>Ownership proof record.</b> A host name and a random token created for it.</td>
@@ -99,10 +106,14 @@
   <div class="c">The Target's operator will see requests from the Scanner Addresses with a FlawRadar user agent in their own logs.</div>
 
   <h2 id="source">Uploaded Source Code</h2>
-  <div class="c">Files you upload are sent to the Service, analysed by automated pattern checks in the server's memory, and discarded when the response is sent. They are not written to disk, not placed in a log, not included in any stored Report, not read by a person, and not used to train any model. Zip files are opened in memory and are not extracted to disk.</div>
-  <div class="c">The results are returned only to your browser. A finding shows the file name, the line number and the line itself. Where the Service recognises a secret (for example a cloud key or a token), it shows only the first characters of it. Other sensitive text on the same line may appear in the result that is returned to you, and the result is not stored by the Service. Your browser and any device you use may keep it, so close the page when you are done.</div>
-  <div class="c">Do not upload secrets or personal data of other people. If you would prefer that your code does not leave your computer, you can run FlawRadar yourself; the project's README explains how.</div>
-  <div class="c">The Service is hosted on infrastructure that may handle memory in ways outside our control (for example swap files or crash diagnostics). We have not designed the Service to retain uploaded code, but we cannot promise that no trace could ever exist at the infrastructure level.</div>
+  <div class="c">The source code check runs in your browser. Files you drop on the source page are read by a script on your own computer, checked there by automated pattern rules, and are not sent to the Service. We do not receive, store, log or read them, and they are not used to train any model. Zip files are opened inside your browser.</div>
+  <div class="c">The results are produced in your browser and shown only to you. A finding shows the file name, the line number and the line itself. Where the Service recognises a secret (for example a cloud key or a token), it shows only the first characters of it. The Service does not receive the results.</div>
+  <div class="c">One thing does leave your device: when a lockfile or requirements file is found, the package names, versions and the name of that file are sent to the Service, which passes the names and versions to the public OSV vulnerability database (osv.dev) to find known vulnerabilities. They are not stored by the Service and contain none of your code. Code sent straight to the Service's API, instead of being checked on the source page, is analysed in memory and discarded when the response is sent; it is not written to disk or logged.</div>
+  <div class="c">Because the check runs on your own device, your browser, extensions and operating system may keep copies of what you open. That is outside our control. If code were ever sent to the API described above, the Service's host could handle memory in ways we do not control (for example swap files or crash diagnostics), and we cannot promise that no trace could ever exist at the infrastructure level.</div>
+
+  <h2 id="watches">Watches (Scheduled Scans and Email Alerts)</h2>
+  <div class="c">If you sign up for a watch, we store the host name, your email address, a secret used in the links we email you, the time you signed up and confirmed, and the score and grade of the last scan. We use your address only to send the confirmation link, the alerts you asked for, and a notice if the watch is paused because the ownership proof was removed. We do not use it for marketing and we do not share it, except with the email provider that delivers the messages (<span class="fill unset" data-legal="hosting">[HOSTING PROVIDER AND REGION]</span> or its mail service).</div>
+  <div class="c">Sign-ups that are not confirmed within two days are deleted. Every email has a link that stops the watch, which deletes the watch record including your address. A watch also stops by itself if the ownership proof for the host is removed. The Reports that a watch produces are kept for the same retention period as any other Report.</div>
 
   <h2 id="use">How We Use Data</h2>
   <div class="c">We use data only to: run scans and source checks and show you the results; apply rate limits and prevent abuse and attacks on the Service or on Targets; investigate complaints; keep a record that the Terms were accepted; keep the Service running and fix faults; and meet legal duties and enforce our terms.</div>
@@ -127,11 +138,11 @@
   <div class="c">The Service does not set cookies and does not use analytics, advertising or fingerprinting. Your browser may remember your confirmation of the Terms in its own local storage on your device, so that you are not asked on every scan. That value stays on your device. You can clear it in your browser settings. The Service ignores "Do Not Track" signals only because it does not track.</div>
 
   <h2 id="deletion">Retention and Deletion</h2>
-  <div class="c">Scan records are deleted automatically after the retention period shown in the table. You may ask us to delete a Report sooner by writing to <span class="fill unset" data-legal="email">[CONTACT EMAIL]</span> with the Report link. You may also ask us to delete the ownership proof record for a host you control. We will confirm what we deleted. We may keep information that we must keep by law, or that we need to deal with a dispute or abuse, for as long as that purpose lasts.</div>
+  <div class="c">Scan records are deleted automatically after the retention period shown in the table. You can delete a Report yourself from its page, from the browser that started the scan. You may also ask us to delete a Report sooner by writing to <span class="fill unset" data-legal="email">[CONTACT EMAIL]</span> with the Report link. You may also ask us to delete the ownership proof record for a host you control. We will confirm what we deleted. We may keep information that we must keep by law, or that we need to deal with a dispute or abuse, for as long as that purpose lasts.</div>
   <div class="c">Because the Service does not keep IP addresses or accounts, we cannot find "your" scans without the Report link or host name you give us.</div>
 
   <h2 id="security">Security</h2>
-  <div class="c">We use measures that fit the Service, including encrypted connections where the Service is served over HTTPS, a strict browser security policy for the pages, limits on what a scan may connect to, and keeping uploaded code out of storage. No system is completely secure. If a breach affects your personal data, we will notify you and the authorities where the law requires.</div>
+  <div class="c">We use measures that fit the Service, including encrypted connections where the Service is served over HTTPS, a strict browser security policy for the pages, limits on what a scan may connect to, and running the source check in your browser so that code is not sent to us. No system is completely secure. If a breach affects your personal data, we will notify you and the authorities where the law requires.</div>
 
   <h2 id="transfers">Where Data Is Processed</h2>
   <div class="c">Data is processed where the Service is hosted: <span class="fill unset" data-legal="hosting">[HOSTING PROVIDER AND REGION]</span>. If you are in a country with different data-protection rules, your data may be moved to and processed in a country whose rules differ from yours. Where the law requires safeguards for such transfers, we use them.</div>

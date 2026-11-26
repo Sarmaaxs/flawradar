@@ -37,6 +37,7 @@
       <p id="error" class="alert" role="alert" hidden></p>
     </fieldset>
   </form>
+  <p class="fine"><small>Only scan sites you own or have written permission to test. Testing a system without permission can be a crime in many countries, and you alone are responsible for your scans. Reports are information, not a guarantee that a site is secure.</small></p>
 
   <div class="two">
     <div class="box">
@@ -45,23 +46,18 @@
       <p><a class="button" href="/source">Check source code</a></p>
     </div>
     <div class="box">
-      <h3>Does your firewall block scanners?</h3>
-      <p>Allow FlawRadar's fixed IP addresses and get ready-made rules for nginx, Cloudflare, fail2ban and more.</p>
-      <p><a class="button" href="/whitelist">Get scanner IPs and rules</a></p>
+      <h3>Want to know when it breaks?</h3>
+      <p>Prove the site is yours and FlawRadar re-checks it every day. You get an email if the grade drops.</p>
+      <p><a class="button" href="/watch">Watch my site</a></p>
     </div>
   </div>
 
-  <h2>What you get</h2>
-  <table>
-    <thead><tr><th scope="col">Feature</th><th scope="col">What it does</th></tr></thead>
-    <tbody>
-      <tr><th scope="row">29 website checks</th><td>HTTPS, redirects, certificate, TLS versions, security headers, cookies, CORS, mixed content, SPF, DMARC, CAA and security.txt.</td></tr>
-      <tr><th scope="row">Fixes you can paste</th><td>Each problem comes with the setting to change. Download all header fixes as one nginx, Apache or Express file.</td></tr>
-      <tr><th scope="row">Scanner whitelist</th><td>Fixed IP addresses and a user agent, so your firewall lets the scan through.</td></tr>
-      <tr><th scope="row">Source code check</th><td>63 rules across JavaScript, Python, PHP, HTML and config files. Nothing is kept.</td></tr>
-      <tr><th scope="row">Score and history</th><td>A grade out of 100, and the change since your last scan of the same site.</td></tr>
-    </tbody>
-  </table>
+  <h2>How it works</h2>
+  <ol class="plain">
+    <li>Type your site address and press Run scan. It takes about ten seconds.</li>
+    <li>You get a grade from A to F and a short list of what to fix first, in plain words.</li>
+    <li>Each problem comes with the exact setting to paste into your server. Download the report to keep or send to your developer.</li>
+  </ol>
   <p><a href="/checks">See every check and why it matters</a></p>
 
   <h2>Questions</h2>
@@ -109,7 +105,7 @@
     <details>
       <summary>What does FlawRadar send and keep?</summary>
       <div class="answer">
-        <p>A normal scan makes about eight read-only requests. Reports are kept for a limited time and then deleted. Uploaded source code is analysed in memory and never stored. FlawRadar sets no cookies. The <a href="/privacy">Privacy Policy</a> lists every kind of data and how long it is kept.</p>
+        <p>A normal scan makes about eight read-only requests. Reports are kept for a limited time and then deleted. Source code is checked in your browser and never sent to FlawRadar. FlawRadar sets no cookies. The <a href="/privacy">Privacy Policy</a> lists every kind of data and how long it is kept.</p>
       </div>
     </details>
   </div>

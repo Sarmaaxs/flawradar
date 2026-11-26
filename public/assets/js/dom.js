@@ -71,6 +71,34 @@ export function forgetTerms() {
   }
 }
 
+const DELETE_PREFIX = 'flawradar-delete-';
+
+/** The secret that lets this browser delete a report it started. Kept only in this browser. */
+export function rememberDeleteToken(id, token) {
+  if (!id || !token) return;
+  try {
+    localStorage.setItem(DELETE_PREFIX + id, token);
+  } catch {
+    /* without it, the delete button is simply not shown */
+  }
+}
+
+export function deleteTokenFor(id) {
+  try {
+    return localStorage.getItem(DELETE_PREFIX + id);
+  } catch {
+    return null;
+  }
+}
+
+export function forgetDeleteToken(id) {
+  try {
+    localStorage.removeItem(DELETE_PREFIX + id);
+  } catch {
+    /* nothing to do */
+  }
+}
+
 export function formatDate(ms) {
   return `${new Date(ms).toISOString().replace('T', ' ').slice(0, 16)} UTC`;
 }

@@ -237,6 +237,11 @@ test('deep checks are skipped without ownership proof and report hits with it', 
   const results = evaluate(ctx({ deep }));
   assert.equal(status(results, 'exposed-env'), 'fail');
   assert.equal(status(results, 'exposed-vcs'), 'pass');
+  assert.equal(status(results, 'exposed-keys'), 'pass');
+  assert.equal(status(results, 'exposed-admin'), 'pass');
+  const more = evaluate(ctx({ deep: { hits: [{ group: 'keys', path: '/.npmrc', status: 200 }, { group: 'admin', path: '/actuator/env', status: 200 }], listings: [], allow: null } }));
+  assert.equal(status(more, 'exposed-keys'), 'fail');
+  assert.equal(status(more, 'exposed-admin'), 'fail');
   assert.equal(status(results, 'dir-listing'), 'fail');
   assert.equal(status(results, 'http-methods'), 'fail');
 });
@@ -289,4 +294,11 @@ test('registrableDomain handles common two-part endings', () => {
   assert.equal(registrableDomain('www.example.com'), 'example.com');
   assert.equal(registrableDomain('a.b.example.co.uk'), 'example.co.uk');
   assert.equal(registrableDomain('example.com'), 'example.com');
+});
+
+test('old-software flags end-of-life versions from headers and passes current ones', () => {
+  const old = evaluate(ctx({ headers: { server: 'Apache/2.2.34', 'x-powered-by': 'PHP/7.4.3' } }));
+  assert.equal(status(old, 'old-software'), 'warn');
+  const fine = evaluate(ctx({ headers: { server: 'nginx/1.26.2', 'x-powered-by': 'PHP/8.3.1' } }));
+  assert.equal(status(fine, 'old-software'), 'pass');
 });

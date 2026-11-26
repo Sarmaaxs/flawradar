@@ -1,5 +1,6 @@
 import { codeTabs } from './components.js';
-import { api, formatDate, h, rememberedTerms, safeHttpsUrl, scannerInfo } from './dom.js';
+import { crossfade, stagger } from './motion.js';
+import { api, deleteTokenFor, forgetDeleteToken, formatDate, h, rememberDeleteToken, rememberedTerms, safeHttpsUrl, scannerInfo } from './dom.js';
 
 const id = location.pathname.split('/').pop();
 const $ = (sel) => document.querySelector(sel);
@@ -23,9 +24,12 @@ function showProblem(title, ...body) {
 }
 
 function renderSteps(progress) {
+  // The meter moves in whole steps: done steps count fully, the running one counts half.
+  const done = progress.filter((s) => s.state === 'done').length + progress.filter((s) => s.state === 'running').length / 2;
+  $('#progress').style.setProperty('--p', String(progress.length ? Math.min(1, done / progress.length) : 0));
   $('#steps').replaceChildren(
     ...progress.map((s) =>
-      h('li', {}, { running: '[ .. ]', done: '[ ok ]', failed: '[fail]' }[s.state] || '[    ]', ' ', s.name),
+      h('li', { class: s.state }, { running: '[ .. ]', done: '[ ok ]', failed: '[fail]' }[s.state] || '[    ]', ' ', s.name),
     ),
   );
 }
@@ -53,6 +57,62 @@ function findingNode(f) {
     ),
     body,
   );
+}
+
+const VERDICT = {
+  A: 'Good news. Your site passes almost everything we check.',
+  B: 'Pretty good. A few small things to tidy up.',
+  C: 'Okay, but not safe enough yet. Fix the items below.',
+  D: 'Weak. Several important protections are missing.',
+  F: 'Poor. Fix the items below as soon as you can.',
+};
+
+/** A short "what is wrong and what to do" in everyday words, for people who are not security experts. */
+function plainWords(r) {
+  const box = $('#plain');
+  const bad = r.findings.filter((f) => f.status === 'fail' || f.status === 'warn')
+    .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+  const grade = String(r.grade || '?').charAt(0).toUpperCase();
+  const parts = [h('p', {}, h('b', {}, `Your grade is ${r.grade}. `), VERDICT[grade] || '')];
+  if (!bad.length) {
+    parts.push(h('p', {}, 'Nothing needs fixing right now. Scan again after you change your site.'));
+  } else {
+    parts.push(h('p', {}, h('b', {}, `${bad.length} thing${bad.length === 1 ? '' : 's'} to fix. Start with these:`)));
+    parts.push(h('ol', { class: 'plain' }, ...bad.slice(0, 3).map((f) => {
+      const meta = checks[f.id] || {};
+      return h('li', {}, h('b', {}, f.title), '. ', meta.why || f.detail || '', f.fix ? h('span', {}, ' ', h('b', {}, 'What to do: '), f.fix.text) : '');
+    })));
+    parts.push(h('p', { class: 'muted' }, 'The full list is below. Open any item to see the exact setting to paste.'));
+  }
+  box.replaceChildren(...parts);
+  box.hidden = false;
+}
+
+function reportText(s) {
+  const r = s.result;
+  const lines = [`FlawRadar report for ${s.host}`, `Scanned ${formatDate(s.createdAt)}`, `Grade ${r.grade}, score ${r.score} out of 100`, ''];
+  const label = { fail: 'FAILED', warn: 'WARNING', pass: 'PASSED', info: 'NOTE', skip: 'NOT RUN' };
+  for (const f of [...r.findings].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity])) {
+    const meta = checks[f.id] || {};
+    lines.push(`[${label[f.status] || f.status}] ${f.title}`);
+    if (f.detail) lines.push(`  What we saw: ${f.detail}`);
+    if (meta.why && f.status !== 'pass') lines.push(`  Why it matters: ${meta.why}`);
+    if (f.fix) lines.push(`  What to do: ${f.fix.text}`);
+    if (f.fix?.snippets) for (const [k, v] of Object.entries(f.fix.snippets)) lines.push(`  --- ${TAB_LABELS[k] || k} ---`, ...String(v).split('\n').map((l) => `  ${l}`));
+    lines.push('');
+  }
+  lines.push('This report is information, not a guarantee that a site is secure.');
+  return lines.join('\n');
+}
+
+function exportReport() {
+  const blob = new Blob([reportText(scan)], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = h('a', { href: url, download: `flawradar-${scan.host.replace(/[^a-z0-9.-]/gi, '_')}.txt` });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
 function renderResult(s) {
@@ -117,6 +177,7 @@ function renderResult(s) {
     );
     container.append(h('h2', {}, category), ...list.map(findingNode));
   }
+  stagger([...container.querySelectorAll('.finding')], 12);
 
   const bundles = ['nginx', 'apache', 'express'].filter((server) =>
     r.findings.some((f) => (f.status === 'fail' || f.status === 'warn') && f.fix?.bundle?.includes(server)),
@@ -128,7 +189,10 @@ function renderResult(s) {
       h('a', { href: `/api/scans/${s.id}/fix?server=${server}` }, TAB_LABELS[server]),
     ]),
   );
+  plainWords(r);
   $('#result').hidden = false;
+  $('#delete-area').hidden = !deleteTokenFor(id);
+  $('#watch-link').setAttribute('href', `/watch?host=${encodeURIComponent(s.host)}`);
 }
 
 function render(s) {
@@ -162,10 +226,45 @@ async function poll() {
   }
 }
 
+$('#export').addEventListener('click', exportReport);
+
+$('#print').addEventListener('click', () => {
+  // Print and save-as-PDF both work from the browser's print dialog. Failed and warned findings are
+  // opened first so their explanations and fixes are on paper; passed ones stay as one line each.
+  const closed = [...document.querySelectorAll('details.finding[data-status="fail"]:not([open]), details.finding[data-status="warn"]:not([open])')];
+  closed.forEach((d) => d.setAttribute('open', ''));
+  window.addEventListener('afterprint', () => closed.forEach((d) => d.removeAttribute('open')), { once: true });
+  window.print();
+});
+
+$('#delete').addEventListener('click', async (event) => {
+  const button = event.currentTarget;
+  if (button.dataset.armed !== '1') {
+    button.dataset.armed = '1';
+    button.textContent = 'Click again to delete for good';
+    setTimeout(() => {
+      button.dataset.armed = '';
+      button.textContent = 'Delete this report';
+    }, 6000);
+    return;
+  }
+  button.disabled = true;
+  try {
+    await api(`/api/scans/${id}`, { method: 'DELETE', headers: { 'X-FlawRadar-Delete': deleteTokenFor(id) || '' } });
+    forgetDeleteToken(id);
+    showProblem('Report deleted', 'This report was deleted from the server. Anyone with the old link now sees "not found". ', h('a', { href: '/' }, 'Start a new scan.'));
+  } catch (err) {
+    button.disabled = false;
+    button.dataset.armed = '';
+    button.textContent = 'Delete this report';
+    $('#meta').textContent = err.message;
+  }
+});
+
 document.querySelectorAll('.toolbar [data-filter]').forEach((b) => {
   b.addEventListener('click', () => {
     document.querySelectorAll('.toolbar [data-filter]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-    $('#findings').dataset.filter = b.dataset.filter;
+    crossfade($('#findings'), () => { $('#findings').dataset.filter = b.dataset.filter; });
   });
 });
 
@@ -181,6 +280,7 @@ $('#rescan').addEventListener('click', async (event) => {
       return;
     }
     const next = await api('/api/scans', { method: 'POST', body: JSON.stringify({ url: scan.host, deep: scan.deep, terms: version }) });
+    rememberDeleteToken(next.id, next.deleteToken);
     location.assign(`/report/${next.id}`);
   } catch (err) {
     button.disabled = false;

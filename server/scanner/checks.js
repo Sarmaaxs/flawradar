@@ -466,6 +466,36 @@ export const CHECKS = [
       });
     },
   },
+  {
+    id: 'old-software',
+    category: 'Headers',
+    title: 'Software is not past its end of life',
+    severity: 'high',
+    why: 'Software that is past its end of life no longer gets security fixes, so every new hole stays open. Attackers scan the internet for these versions.',
+    ref: 'https://endoflife.date/',
+    run(ctx) {
+      const found = [];
+      const server = header(ctx, 'server') || '';
+      const powered = header(ctx, 'x-powered-by') || '';
+      const ver = (text, re) => { const m = re.exec(text); return m ? m[1].split('.').map(Number) : null; };
+      const below = (v, min) => v[0] < min[0] || (v[0] === min[0] && (v[1] || 0) < (min[1] || 0));
+      const apache = ver(server, /Apache\/(\d+(?:\.\d+)*)/i);
+      if (apache && below(apache, [2, 4])) found.push(`Apache ${apache.join('.')} (the 2.2 line ended in 2017)`);
+      const nginx = ver(server, /nginx\/(\d+(?:\.\d+)*)/i);
+      if (nginx && below(nginx, [1, 22])) found.push(`nginx ${nginx.join('.')} (older than the 1.22 line)`);
+      const php = ver(powered, /PHP\/(\d+(?:\.\d+)*)/i);
+      if (php && below(php, [8, 2])) found.push(`PHP ${php.join('.')} (versions before 8.2 no longer get security fixes)`);
+      const iis = ver(server, /IIS\/(\d+(?:\.\d+)*)/i);
+      if (iis && below(iis, [10, 0])) found.push(`IIS ${iis.join('.')} (Windows Server 2012 or older)`);
+      const ssl = ver(server, /OpenSSL\/(\d+(?:\.\d+)*)/i);
+      if (ssl && below(ssl, [3, 0])) found.push(`OpenSSL ${ssl.join('.')} (ended)`);
+      if (!found.length) return ok(server || powered ? 'No end-of-life version found in the headers.' : 'The server does not announce its software, so this could not be checked.');
+      return warn('The server says it runs software that has reached its end of life.', {
+        evidence: found.join('\n'),
+        fix: { text: 'Upgrade to a supported version. If your host patches old versions itself (some Linux distributions do), the header may be out of date. Ask them, or hide the header and check the real version on the server.' },
+      });
+    },
+  },
 
   // ------------------------------------------------------------------ Cookies
   {
@@ -716,6 +746,10 @@ export const CHECKS = [
       'A readable .env file usually holds database passwords and API keys.'],
     ['exposed-backup', 'Backups and configuration copies are not exposed', 'critical', 'backup',
       'Database dumps, site archives and copies of config files like wp-config.php.bak are served as plain downloads by most web servers.'],
+    ['exposed-keys', 'Private keys and credential files are not exposed', 'critical', 'keys',
+      'Private keys, .htpasswd, .npmrc and cloud credential files give direct access to servers, packages and accounts.'],
+    ['exposed-admin', 'Admin panels, API docs and actuator endpoints are not public', 'high', 'admin',
+      'Database panels, Spring actuator endpoints and API specifications on a public address hand attackers a map of the system, and sometimes the keys to it.'],
     ['exposed-misc', 'Debug and server status pages are not exposed', 'medium', 'misc',
       'phpinfo(), server-status and .DS_Store files reveal paths, versions and settings that help an attacker.'],
   ].map(([id, title, severity, group, why]) => ({

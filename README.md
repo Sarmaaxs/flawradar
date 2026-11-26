@@ -1,76 +1,182 @@
-<div align="center">
-
 # FlawRadar
 
-### See your website's security posture more clearly.
+A web security checker for developers developed by Sarem Menur. Enter a website address and FlawRadar reports on its TLS setup, response headers, cookies, DNS records and a few well-known files, then gives you the configuration to fix what it found. It scans from fixed IP addresses that it publishes, so you can allow-list them in a firewall or WAF.
 
-**Find weaknesses. Understand the risk. Know what to improve.**
+- 29 checks in 7 groups, each with an explanation and a fix for nginx, Apache or Express where one applies
+- Bounded multi-page crawl (home + a few same-origin paths) so security headers only set on other routes are not missed
+- Scanner IP and user agent page with ready-made rules for nginx, ModSecurity, fail2ban, ufw and Cloudflare
+- Deep scan (exposed `.git`, `.env`, backups, directory listings, HTTP methods) that only runs after the site owner proves control, by a file or a DNS record
+- Optional **allow record** (`flawradar-allow=1` as DNS TXT at `_flawradar.<host>` or a file at `/.well-known/flawradar-allow.txt`) raises the per-host rate limit so owners who want scans are not treated as noise
+- Reports with a score, grade, history against the previous scan, and downloadable server config
+- Source code check: drop a folder, files or a .zip on `/source` and line rules plus file checks look for hard-coded secrets, SQL injection, XSS, shell injection, weak crypto, turned-off TLS checks and risky config. Known dependency CVEs are looked up via OSV when a lockfile is present. The check runs in the visitor's browser, so code never reaches the server (only package names and versions go to the server for the CVE lookup). The `/api/source` endpoints stay for people who run their own copy
+- No dependencies. Node's standard library and its built-in SQLite module
 
-[![Repository](https://img.shields.io/badge/project-FlawRadar-167D9A)](https://github.com/Sarmaaxs/wsec) [![License](https://img.shields.io/badge/license-Personal%20Evaluation-red)](LICENSE)
+## Requirements
 
-</div>
+Node.js 22.13 or newer. Nothing to install.
 
----
+## Run it
 
-## About FlawRadar
+```sh
+cp .env.example .env     # then edit it
+npm start
+```
 
-FlawRadar is a website security assessment tool for developers, site owners and people learning how web security works. It reviews publicly observable website configuration and turns its findings into explanations that are easier to understand and act on.
+Open http://localhost:3000.
 
-Rather than presenting a list of technical warnings without context, FlawRadar aims to connect each finding with why it matters and what a site owner can consider changing.
+```sh
+npm test                 # unit and integration tests
+```
 
-## What it looks at
+With Docker:
 
-- **Connection security** — TLS configuration and certificate-related details.
-- **Security headers** — browser-facing policies and response-header configuration.
-- **Cookies** — security attributes that affect how browsers handle cookies.
-- **Domain configuration** — selected DNS records and email-domain security signals.
-- **Public exposure** — selected commonly exposed files and server behaviours.
-- **Source review** — common risky code patterns and known dependency advisories in submitted project material.
-- **Remediation guidance** — explanations and suggested configuration improvements for supported server environments.
+```sh
+docker build -t flawradar .
+docker run -p 3000:3000 -v flawradar-data:/data --env-file .env flawradar
+```
 
-FlawRadar is intended to support security awareness and defensive improvement. Automated checks cannot prove that a website is secure, and results should be reviewed in context.
+## Settings
 
-## Responsible use
+All settings are environment variables (or lines in `.env`). See `.env.example` for the full list.
 
-Only assess websites and source code that you own or are explicitly authorized to review. Some deeper checks require the site owner to prove control of the target. Do not use this project to interfere with systems, access data without permission or disrupt services.
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `PORT`, `HOST` | `3000`, `127.0.0.1` | Where the web server listens |
+| `FLAWRADAR_BASE_URL` | `http://localhost:PORT` | Public address of this instance, used in the user agent |
+| `FLAWRADAR_PUBLIC_IPS` | none | Addresses scans leave from. Shown on the Whitelist page |
+| `FLAWRADAR_EGRESS_IP` | none | Bind outgoing connections to this local address |
+| `FLAWRADAR_CONTACT` | none | Abuse contact shown on the Whitelist page |
+| `FLAWRADAR_TRUST_PROXY` | `0` | Read the client address from `X-Forwarded-For` |
+| `FLAWRADAR_SCANS_PER_HOUR` | `12` | Scans per visitor per hour |
+| `FLAWRADAR_SCANS_PER_HOST_PER_HOUR` | `6` | Scans per target host per hour |
+| `FLAWRADAR_MAX_CONCURRENT` | `4` | Scans running at once. More wait in a queue |
+| `FLAWRADAR_RETENTION_DAYS` | `30` | Reports are deleted after this many days |
+| `FLAWRADAR_SOURCE_PER_HOUR` | `20` | Source code checks per visitor per hour |
+| `FLAWRADAR_BLOCKED_HOSTS` | none | Hosts whose owners asked to be excluded (also covers subdomains) |
+| `FLAWRADAR_LEGAL_ENTITY`, `_ADDRESS`, `_EMAIL`, `_LAW`, `_ARBITRATION`, `_HOSTING`, `_LOG_RETENTION` | none | Filled into the Terms, Acceptable Use and Privacy pages |
+| `FLAWRADAR_SMTP_HOST`, `_PORT`, `_USER`, `_PASS`, `_FROM` | none | Mail server. Setting a host switches watches on |
+| `FLAWRADAR_WATCH_INTERVAL_HOURS` | `24` | How often a watched site is rescanned |
+| `FLAWRADAR_MAX_WATCHES_PER_EMAIL`, `FLAWRADAR_WATCH_SIGNUPS_PER_HOUR` | `5`, `6` | Limits for watch sign-ups |
+| `FLAWRADAR_BACKUP_DIR`, `_KEEP`, `_INTERVAL_HOURS` | off, `7`, `24` | Automatic database copies. The Docker image sets `/data/backups` |
+| `FLAWRADAR_DATA_DIR` | `./data` | Where `flawradar.db` is kept |
+| `FLAWRADAR_ALLOW_PRIVATE` | off | Development only. Allows private addresses and custom ports |
 
-## Project
+### Publishing real scanner IPs
 
-- **Project:** FlawRadar
-- **Maintainer:** Sarem Menur (Sarmaaxs)
-- **Repository:** [github.com/Sarmaaxs/wsec](https://github.com/Sarmaaxs/wsec)
+The whitelist feature is only useful if the addresses are true. Run FlawRadar on a host with a fixed public address (or a small set), put those in `FLAWRADAR_PUBLIC_IPS`, and make sure outgoing scan traffic really leaves from them. If the machine has several addresses, set `FLAWRADAR_EGRESS_IP` so connections are bound to the published one. Check it from outside: scan a server you control and read the source address in its access log.
 
-## Usage and permissions
+If the host sits behind NAT or a cloud gateway, publish the gateway's public address, not the machine's private one.
 
-This repository is available for **personal evaluation, learning and private experimentation only**. You may inspect the project and run a copy for your own non-commercial evaluation, subject to the terms below.
+### Behind a reverse proxy
 
-**Commercial use, selling, sharing copies, republishing, redistribution, sublicensing, and distributing modified or derivative versions are not permitted without prior written permission.** Public visibility on GitHub does not grant permission to incorporate this project into a paid service or another product.
+Put nginx or Caddy in front for HTTPS and set `FLAWRADAR_TRUST_PROXY=1` so rate limits use the visitor's address. Only do this when the proxy is the only thing that can reach the app, because the header is otherwise easy to fake. Set `FLAWRADAR_BASE_URL` to the public https address and the app will send HSTS.
 
-## License — Personal Evaluation Only
+## Before you go public
 
-**Copyright (c) 2026 Sarem Menur (Sarmaaxs). All rights reserved.**
+```sh
+npm run check
+```
 
-This is a custom, restrictive license. It is not an open-source license.
+lists what still needs doing: real scanner IPs, the legal details, the contact address, the proxy setting, mail and backups. It exits with code 1 while anything marked FIX is open, and the same list is printed every time the server starts. [DEPLOY.md](DEPLOY.md) walks through it step by step.
 
-1. **Limited permission.** You are granted a limited, revocable, non-exclusive and non-transferable permission to access, view, download and run this project solely for your own personal evaluation, learning and private experimentation. This permission is non-commercial.
-2. **No redistribution.** You may not sell, rent, lease, sublicense, publish, share, mirror, re-upload or otherwise distribute this project or copies of it, in whole or in part.
-3. **No commercial use.** You may not use the project for paid work, a business, a hosted service, a commercial product or any activity intended to generate revenue.
-4. **No derivative distribution.** You may not publish, distribute or commercially exploit forks, modified versions, derivative works or products based on this project. Private modifications for your own permitted evaluation do not grant any right to distribute them.
-5. **No false ownership.** You may not remove ownership notices or claim the project, its design or its contents as your own.
-6. **Third-party materials.** This license covers only material owned by the project copyright holder. Third-party software, services, trademarks and assets remain governed by their respective terms.
-7. **Ownership.** The project is licensed, not sold. All rights not expressly granted remain reserved to the copyright holder.
-8. **Termination.** Permission ends automatically if you breach these terms. You must stop using the project and delete copies in your possession or control.
-9. **Warranty.** The project is provided “AS IS” and “AS AVAILABLE”, without warranties of any kind, to the maximum extent permitted by law.
-10. **Liability.** To the maximum extent permitted by law, the copyright holder is not liable for indirect, incidental, special, consequential or punitive damages, or loss of data, profits or revenue. Nothing excludes liability that cannot legally be excluded.
-11. **Other permissions.** Any commercial use, redistribution, publication, integration into another product or other use outside personal evaluation requires prior written permission.
-12. **Applicable law.** These terms are subject to applicable law. If a provision is unenforceable, the remaining provisions continue to apply to the extent permitted by law.
+## Watches
 
-By downloading or using this project, you agree to these terms. If you do not agree, do not use or retain a copy. The complete license is also provided in [`LICENSE`](LICENSE).
+A visitor who has [proved control of a site](/verify) can ask for a watch: FlawRadar rescans it every day and emails when the grade gets worse (or the score falls by 10 points). The email address is confirmed by a link, every email has a link that stops the watch, and taking the ownership proof off the site stops it too. It needs `FLAWRADAR_SMTP_HOST`; without it the Watch page says so. The mail client is in `server/mail.js` (about 100 lines, TLS and STARTTLS, no dependencies) and the scheduler is in `server/watch.js`.
 
----
+## Deleting a report, printing, backups
 
-<div align="center">
+- The browser that started a scan keeps a secret in its local storage and gets a **Delete this report** button. Only a hash of the secret is stored on the server, so a report link alone cannot delete anything.
+- **Print or save as PDF** on the report page uses the browser's print dialog, with a print stylesheet that hides the controls and spells out links.
+- `FLAWRADAR_BACKUP_DIR` turns on copies of the database (SQLite `VACUUM INTO`, safe while running), `FLAWRADAR_BACKUP_KEEP` of them are kept. `npm run backup` makes one now. `/api/health` returns 503 when the database does not answer and shows the time of the last backup, so an uptime monitor can watch it.
+- `.github/workflows/test.yml` runs the tests on every push.
 
-**FlawRadar** · Security awareness for the web
+## How it works
 
-</div>
+```
+server/
+  index.js          starts the server, purges old reports
+  app.js            routing, static files, API, security headers
+  scans.js          scan queue and concurrency limit
+  verify.js         ownership proof for deep scans
+  watch.js          watches: sign-up, confirmation, scheduled rescans, alerts
+  mail.js           small SMTP client
+  backup.js         automatic database copies
+  preflight.js      the go-live checklist behind `npm run check`
+  db.js             SQLite storage (node:sqlite)
+  ratelimit.js      sliding window limiter
+  source/
+    rules.js        the line rules and file checks, with explanations and fixes
+    analyze.js      runs the rules over uploaded files, masks secrets
+    filechecks.js   .env, Dockerfile, package.json, requirements.txt checks
+    zip.js          minimal zip reader with zip-bomb limits (in memory, nothing extracted)
+    paths.js        which files are read, and path cleaning
+    flow.js         follows request data through variables in one file; secrets by randomness
+    cves.js         known-vulnerability lookup for lockfiles (OSV)
+  scanner/
+    net.js          target parsing, private-address rules, DNS resolution
+    fetcher.js      HTTP client, pins the connection to a checked address
+    tls.js          handshake, certificate details, legacy protocol probe
+    dnsinfo.js      SPF, DMARC, CAA, MX lookups
+    html.js         extracts scripts, styles, frames and forms from HTML
+    checks.js       the checks and their fixes
+    deep.js         exposed-file probes
+    scan.js         runs a scan and collects the data the checks need
+    score.js        scoring and grade caps
+    fixes.js        bundles fixes into a server config file
+public/             the web pages, plain HTML with small custom elements
+test/               unit and integration tests
+```
+
+### Safety of the scanner itself
+
+A tool that makes requests to addresses chosen by strangers can be turned against its own host. FlawRadar handles that in several places:
+
+- Host names are validated. IP literals, internal suffixes (`.local`, `.internal`) and custom ports are refused.
+- Every name is resolved and every address checked against private, loopback, link-local, multicast and other reserved ranges before connecting.
+- The connection is then pinned to the address that was checked, so DNS rebinding cannot swap in another one between the check and the connect.
+- Redirects are followed by hand, at most five, and each hop goes through the same checks.
+- Responses are size-capped and time-limited.
+- Per-visitor and per-host rate limits, a concurrency cap and a queue limit.
+- Deep probes require proof of control, checked again at the start of every deep scan.
+
+The web interface is built without `innerHTML`, and the site serves a strict Content-Security-Policy with no inline scripts or styles.
+
+### The API
+
+| Method and path | Purpose |
+| --- | --- |
+| `POST /api/scans` | Body `{"url": "example.com", "deep": false}`. Returns `202` with `{id}` |
+| `GET /api/scans/:id` | Status, progress and, when done, the result |
+| `GET /api/scans/:id/fix?server=nginx` | Download fixes as config (`nginx`, `apache`, `express`) |
+| `POST /api/verify` | Body `{"host": "example.com"}`. Returns the proof value |
+| `POST /api/verify/check` | Checks whether the proof is in place |
+| `POST /api/source` | Body `{"files": [{"path": "src/a.js", "content": "..."}]}`. Returns findings, nothing stored |
+| `POST /api/source/zip` | Body is the raw .zip, `Content-Type: application/zip` |
+| `POST /api/watch` | Body `{"url", "email", "terms"}`. Starts a watch; a confirmation link is emailed |
+| `DELETE /api/scans/:id` | Header `X-FlawRadar-Delete` with the secret returned when the scan was created |
+| `GET /api/source/rules` | The rule list and upload limits |
+| `GET /api/scanner` | Published addresses, user agent, contact |
+| `GET /api/checks` | The list of checks with explanations |
+| `GET /api/health` | Liveness |
+
+## Source code scanning
+
+The rules in `server/source/rules.js` match one line at a time. On top of them, `server/source/flow.js` does a second pass over each JavaScript, TypeScript, Python and PHP file: it finds variables filled from request data (`req.query`, `$_GET`, `request.args`, `location.hash`), follows them into other variables, and reports when they reach a SQL string, a shell, `eval`, `innerHTML`, a file path, an outgoing request, a redirect or a module load. It also reports secret-named variables that hold random-looking values (entropy). It stays inside one file and does not follow data through function calls or across files, so each such finding is medium or low confidence, and logic errors such as missing permission checks are still not found. Add a sink by adding an object to `JS_SINKS`, `PY_SINKS` or `PHP_SINKS` and a case to `test/flow.test.js`.
+
+Known vulnerabilities in dependencies are looked up via the OSV API when a `package-lock.json` or pinned `requirements.txt` is present (and, less precisely, from `package.json` version ranges if no lockfile exists). The lookup is best-effort: if OSV is unreachable the scan still finishes and a notice is shown. Coverage is not complete — also run `npm audit`, `pip-audit` or `osv-scanner` in CI.
+
+Uploads are limited to 3000 files, 512 KB per file, 30 MB of text and a 10 MB zip (see `server/config.js`). Folders like `node_modules`, `.git`, `vendor`, `dist` and `build` are skipped, and lines over 1000 characters (minified code) are skipped. Zips are read in memory with a hard cap on how far any entry may inflate.
+
+To add a rule, add an object to `RULES` with an `id`, `title`, `severity`, `confidence`, `pattern`, `why`, `fix` and optionally `exts` and a `filter` function, then add a positive and a negative case to `test/source.test.js`.
+
+## Limits
+
+- It checks the home page plus a few same-origin paths. Headers set only on deep or unlinked paths may still be missed.
+- It reads policies as written; it does not run the page, so it cannot tell whether a CSP breaks the site.
+- DKIM cannot be checked from outside.
+- The scan queue and rate limiter are in memory, so this is built for one process. Reports survive restarts, in-flight scans do not.
+- Old TLS probing depends on the local OpenSSL build. When it cannot tell, the check says so instead of passing silently.
+
+## Adding a check
+
+Add an object to `CHECKS` in `server/scanner/checks.js` with an `id`, `category`, `title`, `severity`, `why`, `ref` and a `run(ctx)` function that returns `pass`, `fail`, `warn`, `info` or `skip`. If it needs data the scan does not collect yet, collect it in `server/scanner/scan.js`. Add a test in `test/checks.test.js`.

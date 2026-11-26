@@ -41,6 +41,9 @@ export function isTestPath(path) {
   return /(?:^|\/)(?:tests?|__tests__|spec|fixtures?|mocks?|examples?|samples?|docs?)\//i.test(path) || /\.(?:test|spec)\.[a-z]+$/i.test(path);
 }
 
+/** Dependency manifests are skipped by the line rules but still read for the known-vulnerability lookup. */
+export const MANIFEST_FOR_CVE = /(?:^|\/)(?:package-lock\.json|package\.json|requirements[\w.-]*\.txt)$/i;
+
 /** Returns a reason string when the file should not be read, otherwise null. */
 export function skipReason(path) {
   const dir = skippedDir(path);
