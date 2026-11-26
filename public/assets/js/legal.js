@@ -1,8 +1,7 @@
 import './components.js';
 import { api } from './dom.js';
 
-// Fills the operator's details into the legal pages. Anything not configured
-// stays as a highlighted placeholder, so unfinished text is easy to spot.
+// Fills configured operator details. Unknown provider details are described transparently in the policy.
 try {
   const info = await api('/api/scanner');
   const values = { ...info.legal, ...info.limits, termsVersion: info.termsVersion, baseUrl: info.baseUrl };

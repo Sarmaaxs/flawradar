@@ -9,7 +9,6 @@ const NAV = [
   ['whitelist', '/whitelist', 'Whitelist'],
   ['source', '/source', 'Source code'],
   ['verify', '/verify', 'Verify'],
-  ['watch', '/watch', 'Watch'],
   ['checks', '/checks', 'Checks'],
   ['about', '/about', 'About'],
 ];

@@ -47,7 +47,7 @@ export const config = {
   host: env.HOST || '127.0.0.1',
   baseUrl: (envGet('BASE_URL') || `http://localhost:${port}`).replace(/\/+$/, ''),
   dataDir: envGet('DATA_DIR') || path.join(root, 'data'),
-  contact: envGet('CONTACT') || '',
+  contact: envGet('CONTACT') || 'saremisback@gmail.com',
   quiet: envGet('QUIET') === '1',
 
   // Addresses the scanner connects from. Shown on the Whitelist page.
@@ -70,6 +70,8 @@ export const config = {
   sourcePerHour: num(envGet('SOURCE_PER_HOUR'), 20),
 
   maxZipBytes: 10 * 1024 * 1024,
+  maxSourceFiles: 3000,
+  maxSourceTotalBytes: 30 * 1024 * 1024,
   maxSourceJsonBytes: 12 * 1024 * 1024,
 
   // Watches: scheduled rescans of hosts whose owners proved control, with an email when the
@@ -111,13 +113,13 @@ export const config = {
   // Filled into the legal pages. Anything left empty shows as a highlighted
   // placeholder on the page, so you can see what still needs completing.
   legal: {
-    entity: envGet('LEGAL_ENTITY') || '',
-    address: envGet('LEGAL_ADDRESS') || '',
-    email: envGet('LEGAL_EMAIL') || '',
-    law: envGet('LEGAL_LAW') || '',
-    arbitration: envGet('LEGAL_ARBITRATION') || '',
-    hosting: envGet('LEGAL_HOSTING') || '',
-    logRetention: envGet('LEGAL_LOG_RETENTION') || '',
+    entity: envGet('LEGAL_ENTITY') || 'Sarem Menur',
+
+    email: envGet('LEGAL_EMAIL') || 'saremisback@gmail.com',
+    law: envGet('LEGAL_LAW') || 'the laws of the Federal Democratic Republic of Ethiopia',
+
+    hosting: envGet('LEGAL_HOSTING') || 'the hosting and email service providers selected by the Operator; provider and processing region may change',
+    logRetention: envGet('LEGAL_LOG_RETENTION') || 'Scan reports are retained for the period stated in the Privacy Policy.',
   },
 };
 

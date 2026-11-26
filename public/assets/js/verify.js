@@ -1,5 +1,5 @@
 import './components.js';
-import { api, h } from './dom.js';
+import { api, h, scannerInfo, rememberedTerms, rememberTerms, forgetTerms } from './dom.js';
 
 const $ = (sel) => document.querySelector(sel);
 const input = $('#host');
@@ -83,3 +83,54 @@ $('#check').addEventListener('click', async (event) => {
 });
 
 if (prefill) load();
+
+// Watch signup lives inside Verify so ownership proof and monitoring are one workflow.
+const watchToggle = $('#show-watch');
+const watchPanel = $('#watch-panel');
+watchToggle?.addEventListener('click', () => {
+  const opening = watchPanel.hidden;
+  watchPanel.hidden = !opening;
+  watchToggle.setAttribute('aria-expanded', String(opening));
+  watchToggle.textContent = opening ? 'Hide monitoring form' : 'Set up monitoring';
+  if (opening && current?.host) $('#watch-host').value = current.host;
+});
+
+let watchTermsVersion = null;
+try {
+  const info = await scannerInfo();
+  watchTermsVersion = info.termsVersion;
+  if (rememberedTerms() === watchTermsVersion) $('#watch-terms').checked = true;
+  else if (rememberedTerms()) forgetTerms();
+  if (!info.watches.enabled) {
+    $('#watch-off').hidden = false;
+    $('#watch-submit').disabled = true;
+  }
+} catch { /* API will show a useful error when submitted */ }
+
+$('#verify-watch-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const out = $('#watch-error');
+  const done = $('#watch-done');
+  out.hidden = true; done.hidden = true;
+  if (!$('#watch-terms').checked) {
+    out.textContent = 'Please confirm that you are authorized to monitor this site and accept the Terms.';
+    out.hidden = false; $('#watch-terms').focus(); return;
+  }
+  const button = $('#watch-submit');
+  button.disabled = true; button.textContent = 'Sending confirmation…';
+  try {
+    const host = $('#watch-host').value.trim();
+    const email = $('#watch-email').value.trim();
+    const r = await api('/api/watch', { method: 'POST', body: JSON.stringify({ url: host, email, terms: watchTermsVersion }) });
+    rememberTerms(watchTermsVersion);
+    done.textContent = `Confirmation email sent to ${email}. Open its link to start monitoring ${r.host}. Check spam if it does not arrive.`;
+    done.hidden = false;
+  } catch (err) {
+    out.textContent = err.code === 'needs_verification'
+      ? 'This host is not verified yet. Complete the proof check above, then try again.'
+      : err.message;
+    out.hidden = false;
+  } finally {
+    button.disabled = false; button.textContent = 'Start monitoring';
+  }
+});

@@ -45,11 +45,6 @@
       <p>Drop a folder or a .zip. FlawRadar looks for hard-coded secrets, injection and XSS patterns, and risky settings. Your code is not stored.</p>
       <p><a class="button" href="/source">Check source code</a></p>
     </div>
-    <div class="box">
-      <h3>Want to know when it breaks?</h3>
-      <p>Prove the site is yours and FlawRadar re-checks it every day. You get an email if the grade drops.</p>
-      <p><a class="button" href="/watch">Watch my site</a></p>
-    </div>
   </div>
 
   <h2>How it works</h2>
@@ -60,55 +55,17 @@
   </ol>
   <p><a href="/checks">See every check and why it matters</a></p>
 
-  <h2>Questions</h2>
-  <div class="faq">
-    <details>
-      <summary>How does a scan work?</summary>
-      <div class="answer">
-        <ol class="plain">
-          <li>FlawRadar looks up the host name and refuses anything that points at a private network.</li>
-          <li>It loads the home page over HTTPS, falling back to HTTP, and reads the headers and cookies.</li>
-          <li>At the same time it opens a TLS connection, makes one request to port 80, reads DNS records, and looks for <code>/.well-known/security.txt</code>.</li>
-          <li>Each check is scored, and the report lists the fix for every problem.</li>
-        </ol>
-      </div>
-    </details>
-    <details>
-      <summary>What does FlawRadar look at?</summary>
-      <div class="answer">
-        <dl class="plain">
-          <dt>Transport</dt>
-          <dd>HTTPS, the redirect from HTTP, certificate validity and key size, and whether TLS 1.0 and 1.1 are still accepted.</dd>
-          <dt>Headers</dt>
-          <dd>HSTS, Content-Security-Policy, X-Content-Type-Options, clickjacking protection, Referrer-Policy, Permissions-Policy, CORS, and version numbers in the Server header.</dd>
-          <dt>Cookies and content</dt>
-          <dd>Secure, HttpOnly and SameSite flags, mixed content, third-party scripts without integrity hashes, and password forms.</dd>
-          <dt>DNS and mail</dt>
-          <dd>SPF, DMARC, CAA and security.txt.</dd>
-          <dt>Exposure (deep scan only)</dt>
-          <dd>Exposed Git folders, environment files, backups, debug pages, directory listings and risky HTTP methods.</dd>
-        </dl>
-      </div>
-    </details>
-    <details>
-      <summary>My firewall blocked the scan. What now?</summary>
-      <div class="answer">
-        <p>Bot filters and web application firewalls often block scanners they have not seen before. When that happens FlawRadar says so instead of grading the firewall's error page. Add the scanner addresses to your allow list and scan again. The <a href="/whitelist">whitelist page</a> has the addresses and the rules.</p>
-      </div>
-    </details>
-    <details>
-      <summary>Can I scan any website?</summary>
-      <div class="answer">
-        <p>No. Scan only sites you own or have written permission to test. Scanning someone else's site without permission can be illegal. Only public sites can be scanned, and FlawRadar refuses private and internal addresses. Site owners can ask to be excluded; see the <a href="/acceptable-use#abuse">Acceptable Use Policy</a>.</p>
-      </div>
-    </details>
-    <details>
-      <summary>What does FlawRadar send and keep?</summary>
-      <div class="answer">
-        <p>A normal scan makes about eight read-only requests. Reports are kept for a limited time and then deleted. Source code is checked in your browser and never sent to FlawRadar. FlawRadar sets no cookies. The <a href="/privacy">Privacy Policy</a> lists every kind of data and how long it is kept.</p>
-      </div>
-    </details>
-  </div>
+  <section class="language-panel" aria-labelledby="languages-title">
+    <h2 id="languages-title">Source languages and file formats</h2>
+    <p>FlawRadar currently reads these source, script, markup and configuration formats. Detection is rule-based; coverage differs by language and file type.</p>
+    <div class="language-grid">
+      <div><h3>Programming languages</h3><p>JavaScript, TypeScript, Python, PHP, Ruby, Java, Go, C# and Shell scripts.</p></div>
+      <div><h3>Web and templates</h3><p>HTML, HTM, JSX, TSX, Vue, Svelte, EJS, Handlebars, Twig and PHTML.</p></div>
+      <div><h3>Configuration and data</h3><p>JSON, YAML, TOML, INI, CONF, CFG, CONFIG, ENV, Properties, .htaccess and text files.</p></div>
+      <div><h3>Dependency checks</h3><p>Node.js package manifests and lockfiles, plus pinned Python requirements files for known-vulnerability lookups.</p></div>
+    </div>
+    <p class="muted">C, C++, Rust and other formats are not currently listed as supported source-analysis languages. See <a href="/source">source-code checks</a> for current limits.</p>
+  </section>
 </main>
 
 <w-footer></w-footer>

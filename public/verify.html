@@ -50,6 +50,28 @@
     <div id="outcome" hidden></div>
   </section>
 
+  <section class="verify-watch">
+    <h2>Watch a verified site</h2>
+    <p>After proving control of a site, you can ask FlawRadar to re-check it on a schedule and email you if its grade gets worse.</p>
+    <button type="button" id="show-watch" aria-expanded="false" aria-controls="watch-panel">Set up monitoring</button>
+    <div id="watch-panel" hidden>
+      <form id="verify-watch-form" novalidate>
+        <fieldset>
+          <legend>Monitoring details</legend>
+          <label for="watch-host">Verified website</label>
+          <input id="watch-host" type="text" autocomplete="url" placeholder="example.com" required>
+          <label for="watch-email">Email for alerts</label>
+          <input id="watch-email" type="email" autocomplete="email" placeholder="you@example.com" required>
+          <div class="check"><input id="watch-terms" type="checkbox"><label for="watch-terms">I own this site or have written permission to monitor it, and I accept the <a href="/terms">Terms</a>.</label></div>
+          <button type="submit" id="watch-submit">Start monitoring</button>
+          <p id="watch-error" class="alert" role="alert" hidden></p>
+          <p id="watch-done" class="notice" role="status" hidden></p>
+          <p id="watch-off" class="muted" hidden>Email monitoring is temporarily unavailable.</p>
+        </fieldset>
+      </form>
+    </div>
+  </section>
+
   <h2>Why this exists</h2>
   <p>Without it, anyone could point a scanner at a site they do not run and have it probe for backups and secrets. Both proofs need control of the site's files or its DNS, so they do the job. The file must be on the same host you entered, so a redirect to another host does not count.</p>
 </main>
