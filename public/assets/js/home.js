@@ -1,5 +1,5 @@
 import './components.js';
-import { api, h, forgetTerms, rememberDeleteToken, rememberTerms, rememberedTerms, scannerInfo } from './dom.js';
+import { api, h, forgetTerms, rememberTerms, rememberedTerms, scannerInfo } from './dom.js';
 
 const form = document.getElementById('scan-form');
 const input = document.getElementById('url');
@@ -47,12 +47,11 @@ form.addEventListener('submit', async (event) => {
   button.disabled = true;
   button.textContent = 'Starting...';
   try {
-    const { id, deleteToken } = await api('/api/scans', {
+    const { id } = await api('/api/scans', {
       method: 'POST',
       body: JSON.stringify({ url: value, deep: deep.checked, terms: version }),
     });
     rememberTerms(version);
-    rememberDeleteToken(id, deleteToken);
     location.assign(`/report/${id}`);
   } catch (err) {
     if (err.code === 'needs_verification') {

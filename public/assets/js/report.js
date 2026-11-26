@@ -1,6 +1,5 @@
 import { codeTabs } from './components.js';
-import { crossfade, stagger } from './motion.js';
-import { api, deleteTokenFor, forgetDeleteToken, formatDate, h, rememberDeleteToken, rememberedTerms, safeHttpsUrl, scannerInfo } from './dom.js';
+import { api, formatDate, h, rememberedTerms, safeHttpsUrl, scannerInfo } from './dom.js';
 
 const id = location.pathname.split('/').pop();
 const $ = (sel) => document.querySelector(sel);
@@ -24,12 +23,9 @@ function showProblem(title, ...body) {
 }
 
 function renderSteps(progress) {
-  // The meter moves in whole steps: done steps count fully, the running one counts half.
-  const done = progress.filter((s) => s.state === 'done').length + progress.filter((s) => s.state === 'running').length / 2;
-  $('#progress').style.setProperty('--p', String(progress.length ? Math.min(1, done / progress.length) : 0));
   $('#steps').replaceChildren(
     ...progress.map((s) =>
-      h('li', { class: s.state }, { running: '[ .. ]', done: '[ ok ]', failed: '[fail]' }[s.state] || '[    ]', ' ', s.name),
+      h('li', {}, { running: '[ .. ]', done: '[ ok ]', failed: '[fail]' }[s.state] || '[    ]', ' ', s.name),
     ),
   );
 }
@@ -121,7 +117,6 @@ function renderResult(s) {
     );
     container.append(h('h2', {}, category), ...list.map(findingNode));
   }
-  stagger([...container.querySelectorAll('.finding')], 12);
 
   const bundles = ['nginx', 'apache', 'express'].filter((server) =>
     r.findings.some((f) => (f.status === 'fail' || f.status === 'warn') && f.fix?.bundle?.includes(server)),
@@ -134,8 +129,6 @@ function renderResult(s) {
     ]),
   );
   $('#result').hidden = false;
-  $('#delete-area').hidden = !deleteTokenFor(id);
-  $('#watch-link').setAttribute('href', `/watch?host=${encodeURIComponent(s.host)}`);
 }
 
 function render(s) {
@@ -169,43 +162,10 @@ async function poll() {
   }
 }
 
-$('#print').addEventListener('click', () => {
-  // Print and save-as-PDF both work from the browser's print dialog. Failed and warned findings are
-  // opened first so their explanations and fixes are on paper; passed ones stay as one line each.
-  const closed = [...document.querySelectorAll('details.finding[data-status="fail"]:not([open]), details.finding[data-status="warn"]:not([open])')];
-  closed.forEach((d) => d.setAttribute('open', ''));
-  window.addEventListener('afterprint', () => closed.forEach((d) => d.removeAttribute('open')), { once: true });
-  window.print();
-});
-
-$('#delete').addEventListener('click', async (event) => {
-  const button = event.currentTarget;
-  if (button.dataset.armed !== '1') {
-    button.dataset.armed = '1';
-    button.textContent = 'Click again to delete for good';
-    setTimeout(() => {
-      button.dataset.armed = '';
-      button.textContent = 'Delete this report';
-    }, 6000);
-    return;
-  }
-  button.disabled = true;
-  try {
-    await api(`/api/scans/${id}`, { method: 'DELETE', headers: { 'X-FlawRadar-Delete': deleteTokenFor(id) || '' } });
-    forgetDeleteToken(id);
-    showProblem('Report deleted', 'This report was deleted from the server. Anyone with the old link now sees "not found". ', h('a', { href: '/' }, 'Start a new scan.'));
-  } catch (err) {
-    button.disabled = false;
-    button.dataset.armed = '';
-    button.textContent = 'Delete this report';
-    $('#meta').textContent = err.message;
-  }
-});
-
 document.querySelectorAll('.toolbar [data-filter]').forEach((b) => {
   b.addEventListener('click', () => {
     document.querySelectorAll('.toolbar [data-filter]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-    crossfade($('#findings'), () => { $('#findings').dataset.filter = b.dataset.filter; });
+    $('#findings').dataset.filter = b.dataset.filter;
   });
 });
 
@@ -221,7 +181,6 @@ $('#rescan').addEventListener('click', async (event) => {
       return;
     }
     const next = await api('/api/scans', { method: 'POST', body: JSON.stringify({ url: scan.host, deep: scan.deep, terms: version }) });
-    rememberDeleteToken(next.id, next.deleteToken);
     location.assign(`/report/${next.id}`);
   } catch (err) {
     button.disabled = false;

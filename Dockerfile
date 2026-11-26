@@ -11,8 +11,7 @@ RUN mkdir -p /data && chown node:node /data
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000 \
-    FLAWRADAR_DATA_DIR=/data \
-    FLAWRADAR_BACKUP_DIR=/data/backups
+    FLAWRADAR_DATA_DIR=/data
 
 USER node
 EXPOSE 3000

@@ -19,28 +19,30 @@
   <p>Requests are read-only and come from the <a href="/whitelist">published addresses</a>. A normal scan makes about eight requests. A deep scan, which needs <a href="/verify">proof of control</a>, adds about twenty. FlawRadar never submits a form, logs in, or tries passwords, and it follows at most five redirects, checking every one before it connects.</p>
 
   <h2>What it keeps</h2>
-  <p>Each report stores the host name, the time, the score, the findings, and short evidence such as header values. Page bodies are not stored. For the deep checks, a file counts as exposed only when its content matches the kind of file expected, and the content itself is thrown away. Reports are deleted after the retention period set by the operator. Anyone who has a report link can read the report, so treat the link like a password. Report pages ask search engines not to index them.</p>
+  <p>Each report stores the host name, the time, the score, the findings, and short evidence such as header values. Page bodies are not stored. For the deep checks, a file counts as exposed only when its content matches the kind of file expected, and the content itself is thrown away. Reports are deleted after the retention period set by whoever runs the service. Anyone who has a report link can read the report, so treat the link like a password. Report pages ask search engines not to index them.</p>
 
   <h2>What it will not scan</h2>
   <p>Private addresses, loopback, link-local and other reserved ranges are refused, and so is any name that resolves to one. This is checked again at connect time and at every redirect, so a DNS answer that changes between the check and the connection does not get through. Only ports 80 and 443 are used.</p>
 
-  <h2>Source code check</h2>
-  <p>On the <a href="/source">source code page</a>, the check runs inside your browser. The files you drop are read on your computer and are not sent to FlawRadar, so there is nothing for FlawRadar to store or delete. No report is saved, and results are shown only on that page. The one exception is the package list of a lockfile (names and versions only), which is sent to look up known vulnerabilities. Secrets that match known formats are shown masked to the first three characters. The check is pattern matching, so it finds common mistakes and misses anything that needs following data through the program.</p>
+  <h2>Source code uploads</h2>
+  <p>On the <a href="/source">source code page</a>, files you drop are sent to the server, read in memory and discarded. No copy is written to disk, no report is saved, and results are shown only on that page. Secrets that match known formats are shown masked to the first three characters. The check is pattern matching, so it finds common mistakes and misses anything that needs following data through the program.</p>
 
   <h2>What it cannot tell you</h2>
   <ul>
-    <li>It checks the home page and a few same-origin paths. A header missing there may still be present on deeper routes, and the reverse.</li>
+    <li>It looks at the home page. A header missing from the home page may be present elsewhere, and the reverse.</li>
     <li>It does not look for bugs in your code. A good score means the settings it checks are in place, not that the site is secure.</li>
     <li>Some checks look at what a browser would do (cookies, CSP). They read the policy as written and do not run the page.</li>
     <li>DKIM cannot be checked from outside because the selector name is not public.</li>
-    <li>Sites behind a firewall that blocks unknown scanners may refuse the request. FlawRadar reports that instead of grading the block page. Allow the <a href="/whitelist">scanner addresses</a> so the scan can complete.</li>
+    <li>Sites behind a firewall that blocks unknown scanners may refuse the request. FlawRadar reports that instead of grading the block page.</li>
   </ul>
 
   <h2>Terms and privacy</h2>
   <p>Before a scan or an upload, FlawRadar asks you to confirm that you own the site or code, or have written permission to test it, and to accept the <a href="/terms">Terms of Service</a>, the <a href="/acceptable-use">Acceptable Use Policy</a> and the <a href="/privacy">Privacy Policy</a>. The accepted version is recorded with the scan. Site owners can ask to be excluded from scanning; see the Acceptable Use Policy.</p>
+
+  <h2>Running your own</h2>
+  <p>FlawRadar is a single Node.js process with an SQLite file. The README in the project explains the settings, including how to publish your own scanner addresses so people can allow-list them.</p>
 </main>
 
 <w-footer></w-footer>
-<script type="module" src="/assets/js/components.js"></script>
 </body>
 </html>

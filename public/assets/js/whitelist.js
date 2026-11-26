@@ -85,8 +85,9 @@ async function main() {
       h(
         'p',
         { class: 'alert warn' },
-        'The scanner addresses are not published yet, so there is nothing to allow-list for now.',
-        info.contact ? ` Questions: ${info.contact}.` : ' Please check back soon.',
+        'This FlawRadar instance has no published scanner addresses. The person who runs it needs to set ',
+        h('code', {}, 'FLAWRADAR_PUBLIC_IPS'),
+        ' to the address or addresses its outgoing requests leave from. Until then there is nothing to allow-list.',
       ),
     );
     rulesHolder.replaceChildren(h('p', { class: 'muted' }, 'Rules appear here once addresses are published.'));

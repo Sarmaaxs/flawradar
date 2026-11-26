@@ -1,4 +1,6 @@
 import path from 'node:path';
+import net from 'node:net';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -20,6 +22,17 @@ const num = (v, fallback) => {
 };
 
 const port = num(env.PORT, 3000);
+const publicIps = list(envGet('PUBLIC_IPS'));
+const invalidPublicIps = publicIps.filter((ip) => net.isIP(ip) === 0);
+if (invalidPublicIps.length) throw new Error('FLAWRADAR_PUBLIC_IPS contains invalid IP address(es): ' + invalidPublicIps.join(', '));
+const egressIp = envGet('EGRESS_IP') || '';
+if (egressIp) {
+  if (net.isIP(egressIp) === 0) throw new Error('FLAWRADAR_EGRESS_IP must be a local interface IP address, not a hostname.');
+  const localAddresses = Object.values(os.networkInterfaces()).flat().filter(Boolean).map((entry) => entry.address);
+  if (!localAddresses.includes(egressIp)) {
+    throw new Error('FLAWRADAR_EGRESS_IP must match an IP assigned to a local network interface. A NAT/public egress IP usually does not belong here.');
+  }
+}
 
 export const config = {
   version: '0.1.0',
@@ -32,9 +45,9 @@ export const config = {
   quiet: envGet('QUIET') === '1',
 
   // Addresses the scanner connects from. Shown on the Whitelist page.
-  publicIps: list(envGet('PUBLIC_IPS')),
+  publicIps,
   // Bind outgoing scan connections to this local address.
-  egressIp: envGet('EGRESS_IP') || '',
+  egressIp,
   // Read the client address from X-Forwarded-For (only behind a proxy you control).
   trustProxy: envGet('TRUST_PROXY') === '1',
   // Development only: allow scanning private addresses and custom ports.
@@ -57,29 +70,6 @@ export const config = {
   maxZipBytes: 10 * 1024 * 1024,
   maxSourceJsonBytes: 12 * 1024 * 1024,
 
-  // Watches: scheduled rescans of hosts whose owners proved control, with an email when the
-  // grade drops. Switched on by setting FLAWRADAR_SMTP_HOST.
-  mail: {
-    enabled: Boolean(envGet('SMTP_HOST')),
-    host: envGet('SMTP_HOST') || '',
-    port: num(envGet('SMTP_PORT'), 587),
-    // tls = connect with TLS (port 465), starttls = upgrade (port 587), none = plain (tests only)
-    secure: envGet('SMTP_SECURE') || (num(envGet('SMTP_PORT'), 587) === 465 ? 'tls' : 'starttls'),
-    user: envGet('SMTP_USER') || '',
-    pass: envGet('SMTP_PASS') || '',
-    from: envGet('SMTP_FROM') || '',
-  },
-  watchIntervalHours: num(envGet('WATCH_INTERVAL_HOURS'), 24),
-  maxWatchesPerEmail: num(envGet('MAX_WATCHES_PER_EMAIL'), 5),
-  watchSignupsPerHour: num(envGet('WATCH_SIGNUPS_PER_HOUR'), 6),
-
-  // Automatic copies of the database. Empty directory = off.
-  backup: {
-    dir: envGet('BACKUP_DIR') || '',
-    keep: num(envGet('BACKUP_KEEP'), 7),
-    intervalHours: num(envGet('BACKUP_INTERVAL_HOURS'), 24),
-  },
-
   requestTimeoutMs: 10_000,
   maxPageBytes: 750_000,
   scanTimeoutMs: 90_000,
@@ -91,7 +81,7 @@ export const config = {
   // The version of the Terms, Acceptable Use Policy and Privacy Policy that people accept
   // before a scan. Change it whenever you change those pages in a way that matters; everyone
   // then has to accept again. The scan record keeps the version that was accepted.
-  termsVersion: '2026-11-22',
+  termsVersion: '2026-11-14',
 
   // Filled into the legal pages. Anything left empty shows as a highlighted
   // placeholder on the page, so you can see what still needs completing.
@@ -106,11 +96,6 @@ export const config = {
   },
 };
 
-export const isLocalUrl = (url) => /^https?:\/\/(localhost|127\.|0\.0\.0\.0|\[::1\])/i.test(url);
-
-/** The user agent site owners see in their logs. Never carries a local development address. */
 export function userAgent() {
-  return isLocalUrl(config.baseUrl)
-    ? `FlawRadar-Scanner/${config.version}`
-    : `FlawRadar-Scanner/${config.version} (+${config.baseUrl}/whitelist)`;
+  return `FlawRadar-Scanner/${config.version} (+${config.baseUrl}/whitelist)`;
 }

@@ -55,6 +55,13 @@ export function isPublicIp(ip) {
 const LABEL = /^(?!-)[a-z0-9-]{1,63}(?<!-)$/;
 const INTERNAL_SUFFIX = /(^|\.)(localhost|local|internal|intranet|lan|home|corp)$/;
 
+// Honour operator-maintained opt-out domains, including all subdomains.
+export function isOptedOut(hostname) {
+  const host = String(hostname || '').replace(/^\[|\]$/g, '').toLowerCase().replace(/\.$/, '');
+  if (!host) return false;
+  return config.blockedHosts.some((blocked) => host === blocked || host.endsWith(`.${blocked}`));
+}
+
 /**
  * Turn what a person typed into a scan target.
  * Accepts "example.com", "https://example.com/some/path" and so on.
@@ -114,21 +121,14 @@ export function parseTarget(input) {
   };
 }
 
-/** Hosts whose owners asked not to be scanned. Also covers their subdomains. */
-export function isOptedOut(host) {
-  const h = host.toLowerCase();
-  return config.blockedHosts.some((b) => h === b || h.endsWith(`.${b}`));
-}
-
 /**
  * Resolve a host name and refuse anything that points at a non-public address.
  * Returns address records, IPv4 first.
  */
 export async function resolvePublic(hostname) {
   const bare = hostname.replace(/^\[|\]$/g, '');
-  // Checked on every hop, so a redirect cannot lead the scanner to a host that opted out.
   if (isOptedOut(bare)) {
-    throw new AppError(403, 'opted_out', `${bare} has asked not to be scanned by FlawRadar.`);
+    throw new AppError(403, 'opted_out', `${bare} has opted out of FlawRadar scans.`);
   }
   if (net.isIP(bare)) {
     if (!config.allowPrivate && !isPublicIp(bare)) {
