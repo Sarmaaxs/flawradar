@@ -56,6 +56,26 @@ const JS_SINKS = [
     fix: 'Map allowed names to modules in a fixed object and look the request value up in it.' },
 ];
 
+
+// ---------------------------------------------------------------- Go
+const GO_SOURCE = /\b(?:r\.URL\.Query\(\)|r\.FormValue\s*\(|r\.PostForm\.Get\s*\(|r\.Body\b|os\.Args\b|url\.Query\(\))/;
+const GO_CLEAN = /\b(?:url\.QueryEscape|html\.EscapeString|template\.HTMLEscapeString|strconv\.Atoi|validator\.\w+)\s*\(/;
+const GO_SINKS = [
+  { id: 'sql', title: 'Request data is concatenated into a Go SQL query', severity: 'high', confidence: 'medium', re: /\b(?:Query|QueryRow|Exec|Prepare)\s*\(/, concat: true, why: 'Untrusted request data appears in SQL text. Use database placeholders instead of building query strings.', fix: 'Use db.QueryContext(ctx, "SELECT ... WHERE id = ?", id) with placeholders supported by your driver.' },
+  { id: 'shell', title: 'Request data reaches a Go command invocation', severity: 'critical', confidence: 'medium', re: /\bexec\.Command(?:Context)?\s*\(/, concat: true, why: 'Request-controlled data may influence an operating-system command.', fix: 'Use a fixed executable and separate validated arguments. Never pass untrusted text through a shell.' },
+  { id: 'path', title: 'Request data influences a Go file path', severity: 'high', confidence: 'medium', re: /\b(?:os\.Open|os\.ReadFile|os\.WriteFile|filepath\.Join)\s*\(/, concat: true, why: 'Untrusted input may select a file outside the intended directory.', fix: 'Resolve against a fixed root and verify the final path remains inside that root.' },
+  { id: 'html', title: 'Request data is marked as trusted HTML in Go', severity: 'high', confidence: 'medium', re: /\btemplate\.HTML\s*\(/, why: 'Marking untrusted content as template.HTML bypasses automatic HTML escaping.', fix: 'Keep untrusted values as strings and let html/template escape them.' },
+];
+
+// ---------------------------------------------------------------- C and C++
+const C_SOURCE = /\b(?:getenv|gets|fgets|scanf|fscanf|sscanf|recv|read)\s*\(|\b(?:argv|QUERY_STRING|HTTP_COOKIE|HTTP_USER_AGENT)\b/;
+const C_CLEAN = /\b(?:strtol|strtoul|snprintf|html_escape|validate_[A-Za-z0-9_]*)\s*\(/;
+const C_SINKS = [
+  { id: 'shell', title: 'Untrusted input may reach a C command function', severity: 'critical', confidence: 'medium', re: /\b(?:system|popen|execlp|execvp)\s*\(/, why: 'Input from an external source appears in a process-launch call.', fix: 'Avoid shell command construction. Use a fixed executable and carefully separated, validated arguments.' },
+  { id: 'format', title: 'Untrusted input may be used as a C format string', severity: 'high', confidence: 'medium', re: /\b(?:printf|fprintf|sprintf|snprintf|syslog)\s*\(/, why: 'A user-controlled format string can cause memory-safety problems or disclose data.', fix: 'Use a constant format string, for example printf("%s", value), and validate the input.' },
+  { id: 'memory', title: 'Untrusted input may reach a C memory-copy function', severity: 'high', confidence: 'medium', re: /\b(?:strcpy|strcat|strncpy|memcpy|gets)\s*\(/, why: 'External data reaches a low-level copy operation. Check destination capacity and input length.', fix: 'Prefer bounded APIs with explicit sizes, validate lengths, and use memory-safe abstractions where possible.' },
+];
+
 // ---------------------------------------------------------------- Python
 const PY_SOURCE = /\b(?:request|req)\.(?:args|form|values|json|get_json|GET|POST|data|cookies|headers|files|view_args|query_params|path_params)\b/;
 const PY_CLEAN = /\b(?:int|float|bool|escape|quote|secure_filename|markupsafe\.escape)\s*\(/;
@@ -114,6 +134,8 @@ const LANGS = {
   js: { exts: ['js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs', 'vue', 'svelte'], source: JS_SOURCE, clean: JS_CLEAN, sinks: JS_SINKS, before: '(?<![\\w$.])', after: '(?![\\w$])', prefix: '' },
   py: { exts: ['py'], source: PY_SOURCE, clean: PY_CLEAN, sinks: PY_SINKS, before: '(?<![\\w.])', after: '(?!\\w)', prefix: '' },
   php: { exts: ['php', 'phtml', 'inc'], source: PHP_SOURCE, clean: PHP_CLEAN, sinks: PHP_SINKS, before: '(?<![\\w])', after: '(?!\\w)', prefix: '\\$' },
+  go: { exts: ['go'], source: GO_SOURCE, clean: GO_CLEAN, sinks: GO_SINKS, before: '(?<![\\w.])', after: '(?![\\w])', prefix: '' },
+  c: { exts: ['c', 'h', 'cc', 'cpp', 'hpp'], source: C_SOURCE, clean: C_CLEAN, sinks: C_SINKS, before: '(?<![\\w])', after: '(?![\\w])', prefix: '' },
 };
 const LANG_BY_EXT = Object.fromEntries(Object.entries(LANGS).flatMap(([k, v]) => v.exts.map((e) => [e, k])));
 
@@ -124,6 +146,14 @@ function assignment(lang, line) {
   }
   if (lang === 'py') {
     const m = /^\s*([A-Za-z_]\w*)\s*(?:\+)?=(?!=)\s*(.+)$/.exec(line);
+    return m ? { name: m[1], rhs: m[2] } : null;
+  }
+  if (lang === 'go') {
+    const m = /^\s*(?:var\s+)?([A-Za-z_]\w*)\s*(?::=|=(?!=))\s*(.+)$/.exec(line);
+    return m ? { name: m[1], rhs: m[2] } : null;
+  }
+  if (lang === 'c') {
+    const m = /^\s*(?:(?:const|volatile|static|unsigned|signed|char|int|long|short|size_t|wchar_t|void|\w+_t)\s+|[A-Za-z_]\w*\s*\*+\s*)(?:\*\s*)?([A-Za-z_]\w*)\s*=(?!=)\s*(.+);?\s*$/.exec(line);
     return m ? { name: m[1], rhs: m[2] } : null;
   }
   const m = /^\s*(?:(?:const|let|var)\s+)?([A-Za-z_$][\w$]*)\s*(?:\+)?=(?![=>])\s*(.+)$/.exec(line);
@@ -277,6 +307,8 @@ export function flowCatalog() {
     ...JS_SINKS.map(row('JavaScript, followed in one file')),
     ...PY_SINKS.map(row('Python, followed in one file')),
     ...PHP_SINKS.map(row('PHP, followed in one file')),
+    ...GO_SINKS.map(row('Go, followed in one file')),
+    ...C_SINKS.map(row('C and C++, followed in one file')),
     { id: 'secret-entropy', title: 'Random-looking value in a secret-named variable', severity: 'high', confidence: 'low', applies: 'any' },
   ];
 }

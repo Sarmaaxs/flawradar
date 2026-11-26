@@ -63,6 +63,19 @@ describe('collectPackages', () => {
     assert.ok(packages.some((p) => p.name === 'lodash' && p.version === '4.17.15'));
     assert.ok(!packages.some((p) => p.version === '9.0.0'));
   });
+
+  test('reads Go, Rust, Maven, NuGet, Ruby and PHP package manifests', () => {
+    const { packages } = collectPackages([
+      { path: 'go.mod', content: 'module example.com/app\nrequire github.com/gin-gonic/gin v1.9.1\n' },
+      { path: 'Cargo.lock', content: '[[package]]\nname = "serde"\nversion = "1.0.188"\n' },
+      { path: 'pom.xml', content: '<dependency><groupId>org.example</groupId><artifactId>demo</artifactId><version>1.2.3</version></dependency>' },
+      { path: 'packages.config', content: '<packages><package id="Newtonsoft.Json" version="13.0.1" /></packages>' },
+      { path: 'composer.lock', content: JSON.stringify({ packages: [{ name: 'symfony/http-foundation', version: 'v6.3.0' }] }) },
+      { path: 'Gemfile.lock', content: 'GEM\n  specs:\n    rack (2.2.8)\n' },
+    ]);
+    const ecosystems = new Set(packages.map((p) => p.ecosystem));
+    for (const ecosystem of ['Go', 'crates.io', 'Maven', 'NuGet', 'Packagist', 'RubyGems']) assert.ok(ecosystems.has(ecosystem), ecosystem);
+  });
 });
 
 describe('lookupCves', () => {
@@ -105,6 +118,23 @@ describe('lookupCves', () => {
     assert.equal(findings[0].cve, 'CVE-2019-10744');
     assert.match(findings[0].title, /CVE-2019-10744/);
     assert.match(findings[0].fix, /4\.17\.21/);
+  });
+
+  test('adds EPSS and CISA KEV context and derives critical CVSS 3.1 correctly', async () => {
+    const packages = [{ name: 'demo', version: '1.0.0', ecosystem: 'npm', file: 'package-lock.json', line: 1 }];
+    const fakeFetch = async (url) => {
+      const u = String(url);
+      if (u.includes('querybatch')) return { ok: true, json: async () => ({ results: [{ vulns: [{ id: 'GHSA-demo' }] }] }) };
+      if (u.includes('/vulns/')) return { ok: true, json: async () => ({ id: 'GHSA-demo', summary: 'Remote code execution advisory', aliases: ['CVE-2024-12345'], severity: [{ type: 'CVSS_V3', score: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H' }], affected: [{ package: { name: 'demo', ecosystem: 'npm' }, ranges: [{ type: 'SEMVER', events: [{ introduced: '0' }, { fixed: '1.0.1' }] }] }] }) };
+      if (u.includes('first.org')) return { ok: true, json: async () => ({ data: [{ cve: 'CVE-2024-12345', epss: '0.42', percentile: '0.93', date: '2026-11-27' }] }) };
+      if (u.includes('known_exploited_vulnerabilities')) return { ok: true, json: async () => ({ vulnerabilities: [{ cveID: 'CVE-2024-12345', dateAdded: '2024-01-01', dueDate: '2024-02-01', requiredAction: 'Apply the vendor patch' }] }) };
+      throw new Error('Unexpected intelligence request');
+    };
+    const { findings } = await lookupCves(packages, { fetch: fakeFetch });
+    assert.equal(findings[0].severity, 'critical');
+    assert.equal(findings[0].cvssBaseScore, 9.8);
+    assert.equal(findings[0].epss.score, 0.42);
+    assert.equal(findings[0].kev.requiredAction, 'Apply the vendor patch');
   });
 
   test('survives OSV errors with a notice', async () => {

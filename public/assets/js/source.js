@@ -145,12 +145,12 @@ async function local(files, skippedDirs) {
 
 function findingNode(f) {
   if (f.cve) {
-    const params = new URLSearchParams({ id: f.cve, package: f.package || '', version: f.version || '', ecosystem: f.ecosystem || '', severity: f.severity || 'unknown', file: f.file || '', line: String(f.line || 1), summary: f.why || '', fix: f.fix || '', details: f.advisoryDetails || '', refs: JSON.stringify(f.advisoryReferences || []), ranges: JSON.stringify(f.affectedRanges || []) });
+    const params = new URLSearchParams({ id: f.cve, osv: f.osvId || '', package: f.package || '', version: f.version || '', ecosystem: f.ecosystem || '', severity: f.severity || 'unknown', file: f.file || '', line: String(f.line || 1), summary: f.why || '', fix: f.fix || '', details: f.advisoryDetails || '', refs: JSON.stringify(f.advisoryReferences || []), ranges: JSON.stringify(f.affectedRanges || []), aliases: JSON.stringify(f.aliases || []), cvss: f.cvss || '', cvssBase: String(f.cvssBaseScore ?? ''), epss: JSON.stringify(f.epss || null), kev: JSON.stringify(f.kev || null), published: f.published || '', modified: f.modified || '', affectedPackages: JSON.stringify(f.affectedPackages || []) });
     return h('article', { class: 'finding cve-finding', 'data-severity': f.severity },
       h('a', { class: 'cve-finding-link', href: '/cve?' + params.toString() },
         h('w-status', { value: COLOUR[f.severity], label: f.severity }),
         h('span', {}, h('span', { class: 'title' }, f.title),
-          h('span', { class: 'conf' }, 'OSV dependency match · high confidence'),
+          h('span', { class: 'conf' }, `OSV match${f.kev ? ' · CISA KEV' : ''}${f.epss?.score ? ` · EPSS ${(f.epss.score * 100).toFixed(1)}%` : ''}`),
           h('span', { class: 'brief where' }, f.file + ':' + f.line),
           h('span', { class: 'cve-open' }, 'Open vulnerability analysis →'))));
   }

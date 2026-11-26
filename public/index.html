@@ -12,6 +12,9 @@
 <w-header current="scan"></w-header>
 
 <main>
+  <div class="language-index-wrap">
+    <details class="language-index"><summary class="button">Language index</summary><div class="language-index-list">Assembly, Bash, C, C++, C#, Clojure, COBOL, Crystal, CSS, Dart, Elixir, Erlang, F#, Fortran, Go, Groovy, Haskell, HTML, Java, JavaScript, Julia, Kotlin, Lisp, Lua, MATLAB, Objective-C, OCaml, Perl, PHP, PowerShell, Prolog, Python, R, Ruby, Rust, Scala, Scheme, Shell, Solidity, SQL, Swift, TypeScript, Visual Basic, Zig, Ada, Apex, awk, Batch, CMake, Common Lisp, D, Delphi, Elm, GDScript, GLSL, GraphQL, Hack, Haxe, Idris, J, JSON, JSX, Lean, Make, Markdown, Nim, Pascal, PL/SQL, Q#, Racket, Sass, Svelte, Tcl, Terraform, TOML, Vala, Verilog, VHDL, Vue, WebAssembly, XML, YAML</div></details>
+  </div>
   <h1>Check your website's security</h1>
   <p class="lead">Enter an address. FlawRadar reads the site's certificate, headers, cookies and DNS records, then gives you a short list of fixes you can paste into your server configuration.</p>
 
@@ -20,11 +23,6 @@
       <legend>Scan a website</legend>
       <label for="url">Website address</label>
       <input id="url" name="url" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="example.com" required>
-
-      <div class="check">
-        <input id="deep" name="deep" type="checkbox">
-        <label for="deep">Include deep checks (exposed <code>.git</code> and <code>.env</code> files, directory listings, HTTP methods). Needs proof that you control the site. <a href="/verify">Read how the proof works</a>.</label>
-      </div>
 
       <div id="consent-box" class="consent">
         <div class="check">
@@ -47,52 +45,15 @@
     </div>
   </div>
 
-  <section class="language-ticker" aria-label="Programming languages">
-    <p class="ticker-label">CODE ANALYSIS / LANGUAGE COVERAGE</p>
-    <div class="ticker-window"><div class="ticker-track" aria-hidden="true">
-      <span>JAVASCRIPT</span><span>TYPESCRIPT</span><span>PYTHON</span><span>PHP</span><span>RUBY</span><span>JAVA</span><span>GO</span><span>C#</span><span>SHELL</span><span>HTML</span><span>JSX</span><span>TSX</span>
-      <span>JAVASCRIPT</span><span>TYPESCRIPT</span><span>PYTHON</span><span>PHP</span><span>RUBY</span><span>JAVA</span><span>GO</span><span>C#</span><span>SHELL</span><span>HTML</span><span>JSX</span><span>TSX</span>
-    </div></div><p class="ticker-note">Supported file types vary by rule coverage. See <a href="/source">source-code checks</a>.</p>
-  </section>
 
-  <h2>How it works</h2>
-  <ol class="plain">
-    <li>Type your site address and press Run scan. It takes about ten seconds.</li>
-    <li>You get a grade from A to F and a short list of what to fix first, in plain words.</li>
-    <li>Each problem comes with the exact setting to paste into your server. Download the report to keep or send to your developer.</li>
-  </ol>
-  <p><a href="/checks">See every check and why it matters</a></p>
+  <section class="language-ticker" aria-label="Programming language names"><div class="ticker-window"><div class="ticker-track" aria-hidden="true"><span>Assembly</span><span>Bash</span><span>C</span><span>C++</span><span>C#</span><span>Clojure</span><span>COBOL</span><span>Crystal</span><span>CSS</span><span>Dart</span><span>Elixir</span><span>Erlang</span><span>F#</span><span>Fortran</span><span>Go</span><span>Groovy</span><span>Haskell</span><span>HTML</span><span>Java</span><span>JavaScript</span><span>Julia</span><span>Kotlin</span><span>Lisp</span><span>Lua</span><span>MATLAB</span><span>Objective-C</span><span>OCaml</span><span>Perl</span><span>PHP</span><span>PowerShell</span><span>Prolog</span><span>Python</span><span>R</span><span>Ruby</span><span>Rust</span><span>Scala</span><span>Scheme</span><span>Shell</span><span>Solidity</span><span>SQL</span><span>Swift</span><span>TypeScript</span><span>Visual Basic</span><span>Zig</span><span>Ada</span><span>Apex</span><span>awk</span><span>Batch</span><span>CMake</span><span>Common Lisp</span><span>D</span><span>Delphi</span><span>Elm</span><span>GDScript</span><span>GLSL</span><span>GraphQL</span><span>Hack</span><span>Haxe</span><span>Idris</span><span>J</span><span>JSON</span><span>JSX</span><span>Lean</span><span>Make</span><span>Markdown</span><span>Nim</span><span>Pascal</span><span>PL/SQL</span><span>Q#</span><span>Racket</span><span>Sass</span><span>Svelte</span><span>Tcl</span><span>Terraform</span><span>TOML</span><span>Vala</span><span>Verilog</span><span>VHDL</span><span>Vue</span><span>WebAssembly</span><span>XML</span><span>YAML</span><span>Assembly</span><span>Bash</span><span>C</span><span>C++</span><span>C#</span><span>Clojure</span><span>COBOL</span><span>Crystal</span><span>CSS</span><span>Dart</span><span>Elixir</span><span>Erlang</span><span>F#</span><span>Fortran</span><span>Go</span><span>Groovy</span><span>Haskell</span><span>HTML</span><span>Java</span><span>JavaScript</span><span>Julia</span><span>Kotlin</span><span>Lisp</span><span>Lua</span><span>MATLAB</span><span>Objective-C</span><span>OCaml</span><span>Perl</span><span>PHP</span><span>PowerShell</span><span>Prolog</span><span>Python</span><span>R</span><span>Ruby</span><span>Rust</span><span>Scala</span><span>Scheme</span><span>Shell</span><span>Solidity</span><span>SQL</span><span>Swift</span><span>TypeScript</span><span>Visual Basic</span><span>Zig</span><span>Ada</span><span>Apex</span><span>awk</span><span>Batch</span><span>CMake</span><span>Common Lisp</span><span>D</span><span>Delphi</span><span>Elm</span><span>GDScript</span><span>GLSL</span><span>GraphQL</span><span>Hack</span><span>Haxe</span><span>Idris</span><span>J</span><span>JSON</span><span>JSX</span><span>Lean</span><span>Make</span><span>Markdown</span><span>Nim</span><span>Pascal</span><span>PL/SQL</span><span>Q#</span><span>Racket</span><span>Sass</span><span>Svelte</span><span>Tcl</span><span>Terraform</span><span>TOML</span><span>Vala</span><span>Verilog</span><span>VHDL</span><span>Vue</span><span>WebAssembly</span><span>XML</span><span>YAML</span></div></div></section>
+
+
 
   <h2>Questions</h2>
   <div class="faq">
-    <details>
-      <summary>How does a scan work?</summary>
-      <div class="answer">
-        <ol class="plain">
-          <li>FlawRadar looks up the host name and refuses anything that points at a private network.</li>
-          <li>It loads the home page over HTTPS, falling back to HTTP, and reads the headers and cookies.</li>
-          <li>At the same time it opens a TLS connection, makes one request to port 80, reads DNS records, and looks for <code>/.well-known/security.txt</code>.</li>
-          <li>Each check is scored, and the report lists the fix for every problem.</li>
-        </ol>
-      </div>
-    </details>
-    <details>
-      <summary>What does FlawRadar look at?</summary>
-      <div class="answer">
-        <dl class="plain">
-          <dt>Transport</dt>
-          <dd>HTTPS, the redirect from HTTP, certificate validity and key size, and whether TLS 1.0 and 1.1 are still accepted.</dd>
-          <dt>Headers</dt>
-          <dd>HSTS, Content-Security-Policy, X-Content-Type-Options, clickjacking protection, Referrer-Policy, Permissions-Policy, CORS, and version numbers in the Server header.</dd>
-          <dt>Cookies and content</dt>
-          <dd>Secure, HttpOnly and SameSite flags, mixed content, third-party scripts without integrity hashes, and password forms.</dd>
-          <dt>DNS and mail</dt>
-          <dd>SPF, DMARC, CAA and security.txt.</dd>
-          <dt>Exposure (deep scan only)</dt>
-          <dd>Exposed Git folders, environment files, backups, debug pages, directory listings and risky HTTP methods.</dd>
-        </dl>
-      </div>
-    </details>
+
+
     <details>
       <summary>My firewall blocked the scan. What now?</summary>
       <div class="answer">
@@ -108,7 +69,7 @@
     <details>
       <summary>What does FlawRadar send and keep?</summary>
       <div class="answer">
-        <p>A normal scan makes about eight read-only requests. Reports are kept for a limited time and then deleted. Source code is checked in your browser and never sent to FlawRadar. FlawRadar sets no cookies. The <a href="/privacy">Privacy Policy</a> lists every kind of data and how long it is kept.</p>
+        <p>Reports are kept for a limited time and then deleted. Source code analysis runs in your browser; dependency identifiers are sent only for public vulnerability lookups. FlawRadar sets no cookies. The <a href="/privacy">Privacy Policy</a> explains data handling and retention.</p>
       </div>
     </details>
   </div>

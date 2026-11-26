@@ -2,18 +2,16 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { config, isLocalUrl, userAgent } from './config.js';
+import { config } from './config.js';
 import { AppError } from './errors.js';
 import * as db from './db.js';
 import { Limiter } from './ratelimit.js';
 import { parseTarget, resolvePublic } from './scanner/net.js';
-import { listChecks } from './scanner/checks.js';
 import { buildFixConfig } from './scanner/fixes.js';
-import { queueLength, startScan } from './scans.js';
+import { startScan } from './scans.js';
 import * as watch from './watch.js';
-import * as backup from './backup.js';
 import { checkOwnership, instructions } from './verify.js';
-import { checkAllow, allowInstructions } from './allow.js';
+import { checkAllow } from './allow.js';
 import { analyzeFiles, ruleCatalog } from './source/analyze.js';
 import { lookupCves } from './source/cves.js';
 import { readZip } from './source/zip.js';
@@ -40,9 +38,9 @@ const PAGES = {
   '/': 'index.html',
   '/whitelist': 'whitelist.html',
   '/verify': 'verify.html',
-  '/checks': 'checks.html',
   '/source': 'source.html',
   '/cve': 'cve.html',
+  '/intel': 'intel.html',
   '/about': 'about.html',
   '/terms': 'terms.html',
   '/acceptable-use': 'acceptable-use.html',
@@ -238,47 +236,29 @@ const api = {
     }
     sendJson(res, dbOk ? 200 : 503, {
       ok: dbOk,
-      version: config.version,
-      uptimeSeconds: Math.round(process.uptime()),
-      database: dbOk ? 'ok' : 'error',
-      queued: queueLength(),
-      backup: config.backup.dir ? { lastAt: backup.state.lastAt, error: backup.state.lastError } : null,
     });
   },
 
   scanner(req, res) {
     sendJson(res, 200, {
-      name: 'FlawRadar',
-      version: config.version,
-      userAgent: userAgent(),
+      // Public configuration is deliberately limited to details required by the UI and legal pages.
       ips: config.publicIps,
       contact: config.contact || null,
-      baseUrl: isLocalUrl(config.baseUrl) ? null : config.baseUrl,
       termsVersion: config.termsVersion,
-      watches: { enabled: config.mail.enabled, intervalHours: config.watchIntervalHours, maxPerEmail: config.maxWatchesPerEmail },
+      watches: { enabled: config.mail.enabled, intervalHours: config.watchIntervalHours },
       legal: {
         entity: config.legal.entity || null,
-        address: config.legal.address || null,
         email: config.legal.email || null,
         law: config.legal.law || null,
-        arbitration: config.legal.arbitration || null,
         hosting: config.legal.hosting || null,
         logRetention: config.legal.logRetention || null,
-        updated: config.termsVersion,
       },
-      limits: {
-        scansPerHour: config.scansPerHour,
-        scansPerHostPerHour: config.scansPerHostPerHour,
-        scansPerHostAllowedPerHour: config.scansPerHostAllowedPerHour,
-        sourcePerHour: config.sourcePerHour,
-        retentionDays: config.retentionDays,
-      },
-      allow: allowInstructions('example.com'),
+      limits: { retentionDays: config.retentionDays },
     });
   },
 
-  checks(req, res) {
-    sendJson(res, 200, { checks: listChecks() });
+  intel(req, res) {
+    sendJson(res, 200, { records: db.recentCveIntel(120) });
   },
 
   async createScan(req, res) {
@@ -429,17 +409,20 @@ const api = {
     limitSource(req);
     const body = await readJson(req, 256 * 1024);
     requireTerms(body.terms);
-    if (!Array.isArray(body.packages) || !body.packages.length || body.packages.length > 180) {
-      throw new AppError(400, 'bad_packages', 'Send between 1 and 180 packages.');
+    const ecosystems = new Set(['npm', 'PyPI', 'Go', 'crates.io', 'Maven', 'NuGet', 'RubyGems', 'Packagist']);
+    if (!Array.isArray(body.packages) || !body.packages.length || body.packages.length > 1200) {
+      throw new AppError(400, 'bad_packages', 'Send between 1 and 1200 packages.');
     }
     const packages = [];
     for (const p of body.packages) {
       const ok = p && typeof p.name === 'string' && typeof p.version === 'string' && typeof p.file === 'string' &&
-        ['npm', 'PyPI'].includes(p.ecosystem) && p.name.length <= 214 && p.version.length <= 100;
-      if (!ok) throw new AppError(400, 'bad_packages', 'Each package needs a name, version, ecosystem (npm or PyPI) and file.');
+        ecosystems.has(p.ecosystem) && p.name.length <= 214 && p.version.length <= 100;
+      if (!ok) throw new AppError(400, 'bad_packages', 'Each package needs a supported ecosystem, name, resolved version and file.');
       packages.push({ name: p.name, version: p.version, ecosystem: p.ecosystem, file: p.file.slice(0, 500), line: Number.isInteger(p.line) ? p.line : 1 });
     }
-    sendJson(res, 200, await lookupCves(packages));
+    const result = await lookupCves(packages);
+    db.storeCveIntel(result.findings);
+    sendJson(res, 200, result);
   },
 
   async sourceZip(req, res) {
@@ -482,7 +465,7 @@ const api = {
 const routes = [
   ['GET', /^\/api\/health$/, api.health],
   ['GET', /^\/api\/scanner$/, api.scanner],
-  ['GET', /^\/api\/checks$/, api.checks],
+  ['GET', /^\/api\/intel$/, api.intel],
   ['POST', /^\/api\/scans$/, api.createScan],
   ['GET', new RegExp(`^/api/scans/(${ID})$`), api.getScan],
   ['DELETE', new RegExp(`^/api/scans/(${ID})$`), api.deleteScan],

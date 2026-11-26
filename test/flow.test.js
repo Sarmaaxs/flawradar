@@ -99,3 +99,25 @@ test('test folders are not scanned by the second pass', async () => {
   const r = await analyzeFiles([{ path: 'tests/a.test.js', content: 'const id = req.query.id;\neval(id);\n' }]);
   assert.equal(r.findings.filter((f) => f.ruleId.startsWith('flow-')).length, 0);
 });
+
+
+test('Go and C/C++ request or process input is correlated with sensitive sinks', () => {
+  const go = flow('go', [
+    'func handler(w http.ResponseWriter, r *http.Request) {',
+    '  id := r.URL.Query().Get("id")',
+    '  db.Query("SELECT * FROM users WHERE id = " + id)',
+    '  exec.Command("sh", "-c", id)',
+    '}',
+  ].join('\n'));
+  assert.ok(go.some((f) => f.ruleId === 'flow-sql'));
+  assert.ok(go.some((f) => f.ruleId === 'flow-shell'));
+  const c = flow('c', [
+    'int main(int argc, char **argv) {',
+    '  char *input = getenv("QUERY_INPUT");',
+    '  system(input);',
+    '  printf(input);',
+    '}',
+  ].join('\n'));
+  assert.ok(c.some((f) => f.ruleId === 'flow-shell'));
+  assert.ok(c.some((f) => f.ruleId === 'flow-format'));
+});

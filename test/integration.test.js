@@ -242,22 +242,26 @@ test('api input handling', async () => {
   assert.match(wrongMethod.headers.get('allow'), /POST/);
 });
 
-test('scanner details come from configuration', async () => {
+test('public scanner metadata is limited to required display and legal fields', async () => {
   const { body } = await json('/api/scanner');
   assert.deepEqual(body.ips, ['203.0.113.10', '2001:db8::10']);
-  // With no public address configured, the user agent carries no link rather than a local one.
-  assert.match(body.userAgent, /^FlawRadar-Scanner\/[\d.]+$/);
-  assert.equal(body.baseUrl, null);
+  assert.ok(body.termsVersion);
+  assert.ok(body.legal && 'law' in body.legal);
+  assert.ok(body.limits.retentionDays > 0);
+  for (const key of ['version', 'userAgent', 'baseUrl', 'allow', 'scansPerHour', 'scansPerHostPerHour']) assert.equal(key in body, false, key);
+  const health = (await json('/api/health')).body;
+  assert.deepEqual(Object.keys(health), ['ok']);
 });
 
 test('pages and assets are served with security headers', async () => {
-  for (const path of ['/', '/whitelist', '/verify', '/checks', '/about', '/assets/css/flawradar.css', '/assets/js/components.js', '/robots.txt']) {
+  for (const path of ['/', '/whitelist', '/verify', '/intel', '/source', '/about', '/assets/css/flawradar.css', '/assets/js/components.js', '/robots.txt']) {
     const res = await fetch(`${flawradarUrl}${path}`);
     assert.equal(res.status, 200, path);
     assert.match(res.headers.get('content-security-policy'), /default-src 'none'/, path);
     assert.equal(res.headers.get('x-content-type-options'), 'nosniff', path);
     assert.equal(res.headers.get('x-frame-options'), 'DENY', path);
   }
+  assert.equal((await fetch(`${flawradarUrl}/checks`)).status, 404);
   const report = await fetch(`${flawradarUrl}/report/${'a'.repeat(24)}`);
   assert.equal(report.status, 200);
   assert.equal(report.headers.get('x-robots-tag'), 'noindex');
@@ -284,7 +288,7 @@ test('static serving cannot escape the public directory', async () => {
 });
 
 test('the deep-scan page markup has no inline scripts or styles (CSP safe)', async () => {
-  for (const path of ['/', '/whitelist', '/verify', '/checks', '/about', `/report/${'a'.repeat(24)}`]) {
+  for (const path of ['/', '/whitelist', '/verify', '/intel', '/source', '/about', `/report/${'a'.repeat(24)}`]) {
     const html = await (await fetch(`${flawradarUrl}${path}`)).text();
     assert.doesNotMatch(html, /\sstyle=/i, path);
     assert.doesNotMatch(html, /\son[a-z]+=/i, path);

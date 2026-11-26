@@ -1,23 +1,23 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Vulnerability analysis - FlawRadar</title><meta name="description" content="Understand a dependency vulnerability, its risk, safe validation and remediation.">
+<title>Vulnerability analysis - FlawRadar</title><meta name="description" content="Technical vulnerability analysis, affected software, exploitation signals and remediation.">
 <link rel="stylesheet" href="/assets/css/flawradar.css"><link rel="icon" href="/assets/favicon.svg" type="image/svg+xml"></head>
 <body><w-header current="source"></w-header><main class="cve-page">
-<p><a href="/source">← Back to source-code findings</a></p><p class="muted">FLAWRADAR / VULNERABILITY INTELLIGENCE</p>
-<h1 id="cve-title">Loading vulnerability…</h1><div id="cve-meta" class="cve-meta"></div>
-<section class="cve-panel"><h2>What was detected</h2><p id="cve-summary"></p><p id="cve-location" class="muted"></p><h3>Advisory technical detail</h3><p id="cve-details"></p><h3>Affected version events</h3><pre id="cve-ranges">No version events supplied.</pre><h3>Primary references</h3><ul id="cve-references"></ul></section>
-<h2>How this class of vulnerability can be abused</h2>
-<p>The exact attack depends on the advisory, affected code path, configuration and reachability. This is a conceptual threat path, not a working exploit recipe.</p>
-<ol class="cve-flow">
-<li><b>Identify an exposed feature.</b> An attacker looks for an application feature that uses the affected package, such as a request handler, parser, authentication flow or deployment component.</li>
-<li><b>Check vulnerable conditions.</b> They determine whether the deployed version and configuration match the advisory. A package in a lockfile alone does not prove vulnerable code is reachable.</li>
-<li><b>Reach the affected code path.</b> If untrusted input reaches the vulnerable component, the weakness may be triggered through the application's normal feature boundary. The precise condition must come from the authoritative CVE advisory.</li>
-<li><b>Assess potential impact.</b> Depending on the CVE, impact may include data exposure, service disruption, privilege boundary failure or code execution. FlawRadar must not infer a specific impact without advisory evidence.</li></ol>
-<section class="cve-panel"><h2>Safe validation checklist</h2><ol>
-<li>Confirm the resolved package version from the lockfile and deployed artifact.</li><li>Read the official OSV record and linked vendor advisory; verify affected and fixed ranges.</li>
-<li>Check whether the vulnerable feature is enabled and reachable in your own application.</li><li>Validate only in isolated staging you own or are authorized to test, using vendor-provided non-destructive checks where available.</li>
-<li>Record package version, configuration, reachable code path and advisory reference. Do not test against real user data or disrupt production.</li></ol></section>
-<section class="cve-panel"><h2>Recommended remediation</h2><p id="cve-fix"></p>
-<p>After updating, regenerate and commit the lockfile, rebuild the deployed artifact, and rerun the dependency scan. If no fixed release exists, follow vendor mitigation guidance and consider disabling the affected feature until a fix is available.</p></section>
-<p class="cve-caution"><b>Important:</b> A dependency match is a lead for investigation, not proof of exploitability. Confirm affected version, usage and exposure before assigning final risk.</p>
-<p><a href="/source">Return to FlawRadar findings</a></p></main><w-footer></w-footer><script type="module" src="/assets/js/cve.js"></script></body></html>
+<p><a href="/source">← Back to source findings</a> · <a href="/intel">Open intelligence graph</a></p>
+<div class="cve-layout">
+<aside class="cve-sidebar" aria-label="Analysis topics">
+<a href="#overview">Overview</a><a href="#severity">Risk signals</a><a href="#affected">Affected software</a><a href="#mechanism">Vulnerability mechanics</a><a href="#exposure">Exposure assessment</a><a href="#impact">Potential impact</a><a href="#remediation">Remediation</a><a href="#validation">Validation</a><a href="#references">References</a>
+</aside>
+<div class="cve-content">
+<p class="muted">FLAWRADAR / CVE INTELLIGENCE</p><h1 id="cve-title">Loading vulnerability…</h1><div id="cve-meta" class="cve-meta"></div>
+<section id="overview" class="cve-panel"><h2>Overview</h2><p id="cve-summary"></p><p id="cve-location" class="muted"></p><p id="cve-dates" class="muted"></p><h3>Advisory description</h3><p id="cve-details"></p></section>
+<section id="severity" class="cve-panel"><h2>Risk signals</h2><div id="cve-signals" class="cve-signal-grid"></div><p class="muted">CVSS describes technical severity. EPSS estimates the population-level chance of exploitation in the next 30 days. CISA KEV indicates known exploitation in the wild. None of these alone proves that this specific installation is exploitable.</p></section>
+<section id="affected" class="cve-panel"><h2>Affected software and version boundaries</h2><p id="cve-package"></p><div id="cve-affected-packages"></div><pre id="cve-ranges">No version events supplied.</pre></section>
+<section id="mechanism" class="cve-panel"><h2>Vulnerability mechanics</h2><p id="cve-mechanism"></p><h3>Conceptual attack path</h3><ol class="cve-flow"><li><b>Entry point.</b> An attacker would need access to an application feature that invokes the affected component.</li><li><b>Preconditions.</b> The installed version, configuration and relevant feature must match the advisory's affected conditions.</li><li><b>Trigger condition.</b> Untrusted input or an application state reaches the vulnerable code path. The exact trigger must be taken from the vendor advisory, not guessed from the package name.</li><li><b>Security boundary.</b> The weakness may cross a data, privilege or availability boundary described by the advisory.</li><li><b>Outcome.</b> The impact depends on the specific CVE and the permissions of the affected process.</li></ol></section>
+<section id="exposure" class="cve-panel"><h2>Exposure assessment</h2><ul id="cve-exposure"><li>Confirm the package is present in the deployed artifact, not only a development lockfile.</li><li>Check whether the vulnerable feature is enabled and reachable.</li><li>Determine whether the package is direct or transitive and whether a compensating control exists.</li></ul></section>
+<section id="impact" class="cve-panel"><h2>Potential impact</h2><p id="cve-impact"></p><p class="muted">FlawRadar does not infer a concrete impact where the advisory does not provide enough evidence.</p></section>
+<section id="remediation" class="cve-panel"><h2>Remediation</h2><p id="cve-fix"></p><ol><li>Upgrade to a vendor-confirmed fixed release.</li><li>Regenerate the lockfile and rebuild the deployed artifact.</li><li>Review vendor mitigation notes if an upgrade is not yet possible.</li><li>Rerun dependency analysis and retain the updated package inventory.</li></ol></section>
+<section id="validation" class="cve-panel"><h2>Safe validation</h2><ol><li>Compare the resolved version with the authoritative affected and fixed ranges.</li><li>Trace whether your application calls the affected package feature.</li><li>Use a non-destructive vendor check in an isolated environment you control.</li><li>Record the version, configuration, evidence and remediation result.</li></ol></section>
+<section id="references" class="cve-panel"><h2>References and identifiers</h2><p id="cve-aliases"></p><ul id="cve-references"></ul></section>
+<p class="cve-caution"><b>Finding status:</b> A dependency match is an investigation lead. Confirm the exact deployed version, affected range and reachable code path before treating it as a confirmed vulnerability.</p>
+</div></div></main><w-footer></w-footer><script type="module" src="/assets/js/cve.js"></script></body></html>

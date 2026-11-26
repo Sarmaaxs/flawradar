@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Whitelist the scanner - FlawRadar</title>
-<meta name="description" content="The addresses and user agent FlawRadar scans from, with allow-list rules for nginx, ModSecurity, fail2ban, ufw and Cloudflare.">
+<meta name="description" content="The public scanner addresses needed for firewall allow-listing.">
 <link rel="stylesheet" href="/assets/css/flawradar.css">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 </head>
@@ -12,45 +12,13 @@
 <w-header current="whitelist"></w-header>
 
 <main>
-  <h1>Whitelist the scanner</h1>
-  <p class="lead">Firewalls, bot filters and rate limiters often block scanners. Allow the addresses below and FlawRadar can read your site the way a visitor does. Every request comes from one of these addresses and carries the user agent shown here.</p>
+  <h1>Scanner addresses</h1>
+  <p class="lead">If you choose to allow-list FlawRadar, use the published addresses below. Do not allow-list an address you cannot verify.</p>
 
   <h2>Scanner addresses</h2>
   <div id="ips"><p class="muted">Loading...</p></div>
 
-  <h2>User agent</h2>
-  <w-copy id="ua" label="User-Agent header"></w-copy>
-  <p><small>A user agent is easy to fake, so use it for logging and filtering, and do not treat it as proof. The address is what to allow.</small></p>
 
-  <h2>Allow-list rules</h2>
-  <p>These are generated from the addresses above. Read them before you paste them in: they match your server's configuration style, not your exact setup.</p>
-  <div id="rules"></div>
-
-  <h2>What the scanner does</h2>
-  <ul>
-    <li>Normal scan: about eight requests. The home page over HTTPS, one request to port 80, one CORS test, one or two requests for <code>security.txt</code>, a TLS handshake, and some DNS lookups.</li>
-    <li>Deep scan: about twenty more requests for well-known paths, spaced a fraction of a second apart. Deep scans only run against hosts whose owner has <a href="/verify">proved control</a>.</li>
-    <li>Only <code>GET</code>, <code>HEAD</code> and one <code>OPTIONS</code> request. Nothing is submitted, no forms are filled in, nothing is guessed at, no passwords are tried.</li>
-    <li>No more than six scans of one host per hour by default, and twelve per hour from one visitor. Hosts with an allow record (below) get a higher per-host limit.</li>
-    <li>Responses are checked and discarded. The report keeps the findings, a few header values and short excerpts used as evidence.</li>
-  </ul>
-
-  <h2>Allow more scans of your own site</h2>
-  <p>If you own the site and want FlawRadar to treat it as opted-in (higher per-host rate limit, less “noise” friction), publish one of the following. Removing it restores the normal limit immediately.</p>
-  <ol>
-    <li>
-      <strong>DNS TXT</strong> (preferred) at <code>_flawradar.<em>your-domain</em></code>:
-      <pre class="evidence">flawradar-allow=1</pre>
-      Optional contact for abuse reports:
-      <pre class="evidence">flawradar-allow=1; contact=security@example.com</pre>
-      This can sit next to a <code>flawradar-verify=…</code> record used for deep scans — DNS allows multiple TXT values on the same name.
-    </li>
-    <li>
-      <strong>File</strong> at <code>/.well-known/flawradar-allow.txt</code> on the site, with the same content:
-      <pre class="evidence">flawradar-allow=1</pre>
-    </li>
-  </ol>
-  <p>After the record is live, the next scan of that host uses the higher limit and the report notes that the host has opted in.</p>
 
   <p id="contact" class="notice" hidden></p>
 </main>

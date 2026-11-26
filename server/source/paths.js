@@ -5,14 +5,14 @@ export const SKIP_DIRS = new Set([
   '__pycache__', 'venv', '.venv', 'bower_components', 'coverage', '.idea', '.vscode', 'target',
 ]);
 
-const SKIP_FILE = /(?:^|\/)(?:package-lock\.json|yarn\.lock|pnpm-lock\.yaml|composer\.lock|Pipfile\.lock|poetry\.lock|Gemfile\.lock|\.DS_Store)$|\.min\.(?:js|css)$|\.map$/i;
+const SKIP_FILE = /(?:^|\/)(?:package-lock\.json|yarn\.lock|pnpm-lock\.yaml|composer\.lock|Pipfile\.lock|poetry\.lock|Gemfile\.lock|Cargo\.lock|go\.sum|go\.mod|packages\.lock\.json|packages\.config|\.DS_Store)$|\.min\.(?:js|css)$|\.map$/i;
 
 const TEXT_EXT = new Set([
   'js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs', 'vue', 'svelte',
   'py', 'php', 'phtml', 'inc',
   'html', 'htm', 'ejs', 'hbs', 'twig',
   'json', 'yml', 'yaml', 'toml', 'ini', 'conf', 'cfg', 'config', 'env', 'properties',
-  'txt', 'sh', 'rb', 'java', 'go', 'cs', 'htaccess',
+  'txt', 'sh', 'rb', 'java', 'go', 'cs', 'c', 'h', 'cc', 'cpp', 'hpp', 'rs', 'kt', 'swift', 'scala', 'ex', 'exs', 'erl', 'hs', 'lua', 'pl', 'r', 'dart', 'sol', 'tf', 'xml', 'htaccess',
 ]);
 
 /** Clean a path from an upload. Returns null for anything that tries to climb out of the root. */
@@ -42,7 +42,7 @@ export function isTestPath(path) {
 }
 
 /** Dependency manifests are skipped by the line rules but still read for the known-vulnerability lookup. */
-export const MANIFEST_FOR_CVE = /(?:^|\/)(?:package-lock\.json|package\.json|requirements[\w.-]*\.txt)$/i;
+export const MANIFEST_FOR_CVE = /(?:^|\/)(?:package-lock\.json|package\.json|requirements[\w.-]*\.txt|go\.mod|go\.sum|Cargo\.lock|composer\.lock|Gemfile\.lock|pom\.xml|packages\.lock\.json|packages\.config|Pipfile\.lock|poetry\.lock)$/i;
 
 /** Returns a reason string when the file should not be read, otherwise null. */
 export function skipReason(path) {

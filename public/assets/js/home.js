@@ -3,7 +3,6 @@ import { api, h, forgetTerms, rememberDeleteToken, rememberTerms, rememberedTerm
 
 const form = document.getElementById('scan-form');
 const input = document.getElementById('url');
-const deep = document.getElementById('deep');
 const terms = document.getElementById('terms');
 const consent = document.getElementById('consent-box');
 const button = document.getElementById('go');
@@ -49,7 +48,7 @@ form.addEventListener('submit', async (event) => {
   try {
     const { id, deleteToken } = await api('/api/scans', {
       method: 'POST',
-      body: JSON.stringify({ url: value, deep: deep.checked, terms: version }),
+      body: JSON.stringify({ url: value, deep: false, terms: version }),
     });
     rememberTerms(version);
     rememberDeleteToken(id, deleteToken);

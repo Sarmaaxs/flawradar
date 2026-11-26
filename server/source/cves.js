@@ -12,13 +12,50 @@ import { baseName } from './paths.js';
 
 const OSV_BATCH_URL = 'https://api.osv.dev/v1/querybatch';
 const OSV_VULN_URL = 'https://api.osv.dev/v1/vulns';
-const MAX_PACKAGES = 180; // keep the request and response small
-const BATCH_SIZE = 60;
+const MAX_PACKAGES = 1200; // keep the request and response small
+const BATCH_SIZE = 100;
 const REQUEST_TIMEOUT_MS = 12_000;
 const DETAIL_CONCURRENCY = 8;
-const MAX_CVE_FINDINGS = 60;
+const MAX_CVE_FINDINGS = 400;
 
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
+
+const EPSS_URL = 'https://api.first.org/data/v1/epss';
+const KEV_URL = 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json';
+let kevCache = { at: 0, entries: new Map() };
+
+async function intelligenceSignals(cveIds, doFetch) {
+  const epss = new Map(); const kev = new Map(); const ids = [...new Set(cveIds.filter((id) => /^CVE-\d{4}-\d{4,}$/i.test(id)))];
+  if (!ids.length) return { epss, kev, notices: [] };
+  const notices = [];
+  try {
+    for (let i = 0; i < ids.length; i += 100) {
+      const batch = ids.slice(i, i + 100);
+      const url = `${EPSS_URL}?cve=${encodeURIComponent(batch.join(','))}`;
+      const res = await doFetch(url, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(8000) });
+      if (!res.ok) throw new Error(`EPSS HTTP ${res.status}`);
+      const body = await res.json();
+      for (const item of body.data || []) epss.set(item.cve, { score: Number(item.epss), percentile: Number(item.percentile), date: item.date || null });
+    }
+  } catch { notices.push('EPSS exploitation-likelihood data was unavailable; CVSS and advisory severity are still shown.'); }
+  try {
+    const useSharedCache = doFetch === globalThis.fetch;
+    let entries = useSharedCache ? kevCache.entries : null;
+    if (!useSharedCache || kevCache.at === 0 || Date.now() - kevCache.at > 6 * 60 * 60 * 1000) {
+      const res = await doFetch(KEV_URL, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(10000) });
+      if (!res.ok) throw new Error(`KEV HTTP ${res.status}`);
+      const body = await res.json();
+      entries = new Map();
+      for (const item of body.vulnerabilities || []) if (item.cveID) entries.set(item.cveID, item);
+      if (useSharedCache) kevCache = { at: Date.now(), entries };
+    }
+    for (const id of ids) if (entries.has(id)) {
+      const item = entries.get(id);
+      kev.set(id, { dateAdded: item.dateAdded || null, dueDate: item.dueDate || null, requiredAction: String(item.requiredAction || '').slice(0, 800), ransomware: item.knownRansomwareCampaignUse || 'Unknown', vendor: item.vendorProject || '', product: item.product || '' });
+    }
+  } catch { notices.push('CISA Known Exploited Vulnerabilities status was unavailable; no KEV status is assumed.'); }
+  return { epss, kev, notices };
+}
 
 /** @typedef {{ name: string, version: string, ecosystem: string, file: string, line: number }} Pkg */
 
@@ -85,6 +122,26 @@ export function collectPackages(files) {
       }
     } catch {
       notices.push(`Could not parse ${f.path} for vulnerability lookup.`);
+    }
+  }
+
+  // Additional ecosystems. Each parser emits exact resolved versions where lockfiles provide them.
+  for (const f of files) {
+    const name = baseName(f.path).toLowerCase();
+    let parsed = [];
+    try {
+      if (name === 'go.sum' || name === 'go.mod') parsed = parseGo(f.path, f.content);
+      else if (name === 'cargo.lock') parsed = parseCargo(f.path, f.content);
+      else if (name === 'composer.lock') parsed = parseComposer(f.path, f.content);
+      else if (name === 'gemfile.lock') parsed = parseGemfile(f.path, f.content);
+      else if (name === 'pom.xml' || name.endsWith('.csproj') || name === 'packages.config') parsed = parseXmlPackages(f.path, f.content);
+      else if (name === 'packages.lock.json') parsed = parseNugetLock(f.path, f.content);
+      else if (name === 'poetry.lock' || name === 'pipfile.lock') parsed = parsePythonLock(f.path, f.content);
+    } catch { notices.push(`Could not parse ${f.path} for vulnerability lookup.`); }
+    for (const pkg of parsed) {
+      const key = `${pkg.ecosystem}|${pkg.name}|${pkg.version}`;
+      if (seen.has(key)) continue;
+      seen.add(key); packages.push(pkg);
     }
   }
 
@@ -186,28 +243,35 @@ export async function lookupCves(packages, opts = {}) {
     );
   }
 
+  const signalIds = [];
+  for (const vuln of details.values()) signalIds.push(...(vuln.aliases || []).filter((a) => /^CVE-/i.test(a)));
+  const signals = await intelligenceSignals(signalIds, doFetch);
   for (const [id, pkgs] of hits) {
     const vuln = details.get(id) || { id };
     for (const pkg of pkgs) {
       const finding = vulnToFinding(pkg, vuln);
-      if (finding) findings.push(finding);
+      if (!finding) continue;
+      const epss = signals.epss.get(finding.cve) || null;
+      const kev = signals.kev.get(finding.cve) || null;
+      finding.epss = epss;
+      finding.kev = kev;
+      findings.push(finding);
     }
   }
 
-  // Highest severity first, then package name
-  findings.sort(
-    (a, b) =>
-      SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] ||
-      a.file.localeCompare(b.file) ||
-      a.title.localeCompare(b.title),
-  );
+  // Severity remains primary; known in-the-wild exploitation and EPSS break ties.
+  findings.sort((a, b) =>
+    SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] ||
+    Number(Boolean(b.kev)) - Number(Boolean(a.kev)) ||
+    (b.epss?.score || 0) - (a.epss?.score || 0) ||
+    a.file.localeCompare(b.file) || a.title.localeCompare(b.title));
 
   if (findings.length > MAX_CVE_FINDINGS) {
     findings.length = MAX_CVE_FINDINGS;
     notices.push(`Only the ${MAX_CVE_FINDINGS} highest-severity known vulnerabilities are shown.`);
   }
 
-  return { findings, notices, checked };
+  return { findings, notices: [...notices, ...signals.notices], checked };
 }
 
 /**
@@ -349,6 +413,86 @@ function normalizePyName(name) {
   return name.toLowerCase().replace(/[._]/g, '-');
 }
 
+function parseGo(path, content) {
+  const out = [];
+  for (const [i, line] of content.split('\n').entries()) {
+    let t = line.trim();
+    if (!t || t.startsWith('//') || t.startsWith('module ') || t.startsWith('go ') || t === 'require (' || t === ')') continue;
+    t = t.replace(/^require\s+/, '');
+    const m = t.match(/^([^\s]+)\s+(v?\d+\.\d+\.\d+(?:[-+][^\s]+)?)(?:\s+\/\/.*)?$/);
+    if (!m || m[1].startsWith('replace')) continue;
+    let version = m[2].replace(/\+incompatible$/, '').replace(/\/go\.mod$/, '');
+    if (version.startsWith('v')) version = version.slice(1);
+    if (version.includes('/')) continue;
+    out.push({ name: m[1], version, ecosystem: 'Go', file: path, line: i + 1 });
+  }
+  return out;
+}
+
+function parseCargo(path, content) {
+  const out = []; let block = ''; let start = 1;
+  const flush = () => {
+    const name = block.match(/^name\s*=\s*["']([^"']+)["']/m)?.[1];
+    const version = block.match(/^version\s*=\s*["']([^"']+)["']/m)?.[1];
+    if (name && version) out.push({ name, version, ecosystem: 'crates.io', file: path, line: start });
+  };
+  for (const [i, line] of content.split('\n').entries()) { if (line.trim() === '[[package]]') { if (block) flush(); block = ''; start = i + 1; } else block += line + '\n'; }
+  if (block) flush(); return out;
+}
+
+function parseComposer(path, content) {
+  const doc = JSON.parse(content); const out = [];
+  for (const p of [...(doc.packages || []), ...(doc['packages-dev'] || [])]) if (p.name && p.version) out.push({ name: p.name, version: String(p.version).replace(/^v/, ''), ecosystem: 'Packagist', file: path, line: 1 });
+  return out;
+}
+
+function parseGemfile(path, content) {
+  const out = []; let inSpecs = false;
+  for (const [i, line] of content.split('\n').entries()) {
+    if (/^  specs:/.test(line)) { inSpecs = true; continue; }
+    if (inSpecs && /^  [a-zA-Z]/.test(line)) inSpecs = false;
+    if (!inSpecs) continue;
+    const m = line.match(/^    ([A-Za-z0-9_.-]+) \(([^)]+)\)/);
+    if (m) out.push({ name: m[1], version: m[2].split(' ')[0], ecosystem: 'RubyGems', file: path, line: i + 1 });
+  }
+  return out;
+}
+
+function parseXmlPackages(path, content) {
+  const out = []; const re = /<PackageReference\b[^>]*Include=["']([^"']+)["'][^>]*Version=["']([^"']+)["'][^>]*\/?>|<dependency>[\s\S]*?<groupId>([^<]+)<\/groupId>[\s\S]*?<artifactId>([^<]+)<\/artifactId>[\s\S]*?<version>([^<]+)<\/version>[\s\S]*?<\/dependency>/gi;
+  let m; while ((m = re.exec(content))) {
+    if (m[1] && m[2] && !m[2].includes('$')) out.push({ name: m[1], version: m[2], ecosystem: 'NuGet', file: path, line: content.slice(0,m.index).split('\n').length });
+    else if (m[3] && m[4] && m[5] && !m[5].includes('$')) out.push({ name: `${m[3]}:${m[4]}`, version: m[5], ecosystem: 'Maven', file: path, line: content.slice(0,m.index).split('\n').length });
+  }
+  const old = /<package\s+id=["']([^"']+)["']\s+version=["']([^"']+)["']/gi;
+  while ((m = old.exec(content))) out.push({ name: m[1], version: m[2], ecosystem: 'NuGet', file: path, line: content.slice(0,m.index).split('\n').length });
+  return out;
+}
+
+function parseNugetLock(path, content) {
+  const doc = JSON.parse(content); const out = [];
+  for (const [framework, deps] of Object.entries(doc.dependencies || {})) for (const [name, meta] of Object.entries(deps || {})) {
+    const version = meta?.resolved; if (version) out.push({ name, version: String(version), ecosystem: 'NuGet', file: path, line: 1 });
+  }
+  return out;
+}
+
+function parsePythonLock(path, content) {
+  const out = [];
+  if (baseName(path).toLowerCase() === 'poetry.lock') {
+    let name = null, version = null, line = 1;
+    for (const [i, row] of content.split('\n').entries()) {
+      if (row.trim() === '[[package]]') { if (name && version) out.push({ name: normalizePyName(name), version, ecosystem: 'PyPI', file: path, line }); name = null; version = null; line = i + 1; }
+      name ||= row.match(/^name\s*=\s*["']([^"']+)["']/)?.[1] || null;
+      version ||= row.match(/^version\s*=\s*["']([^"']+)["']/)?.[1] || null;
+    }
+    if (name && version) out.push({ name: normalizePyName(name), version, ecosystem: 'PyPI', file: path, line });
+  } else {
+    try { const doc = JSON.parse(content); for (const [name, meta] of Object.entries(doc.default || {})) { const v = meta?.version?.replace(/^==/, ''); if (v) out.push({ name: normalizePyName(name), version: v, ecosystem: 'PyPI', file: path, line: 1 }); } } catch {}
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // OSV → finding
 // ---------------------------------------------------------------------------
@@ -380,13 +524,44 @@ function vulnToFinding(pkg, vuln) {
     fix,
     // extra fields the UI can ignore
     cve: cveLabel,
+    osvId: vuln.id,
     package: pkg.name,
     version: pkg.version,
     ecosystem: pkg.ecosystem,
     advisoryDetails: String(vuln.details || '').slice(0, 1800),
     advisoryReferences: (vuln.references || []).filter((r) => r && /^https:\/\//i.test(r.url || '')).slice(0, 4).map((r) => ({ type: String(r.type || 'WEB').slice(0, 20), url: r.url })),
     affectedRanges: (vuln.affected || []).filter((a) => a.package?.name === pkg.name && a.package?.ecosystem === pkg.ecosystem).flatMap((a) => (a.ranges || []).map((r) => ({ type: r.type, events: (r.events || []).slice(0, 20) }))).slice(0, 4),
+    aliases: (vuln.aliases || []).slice(0, 12),
+    modified: vuln.modified || null,
+    published: vuln.published || null,
+    withdrawn: vuln.withdrawn || null,
+    cvss: extractCvss(vuln),
+    cvssBaseScore: (() => { const vector = extractCvss(vuln); return vector ? cvss31BaseScore(vector) : null; })(),
+    affectedPackages: (vuln.affected || []).map((a) => ({ ecosystem: a.package?.ecosystem || '', name: a.package?.name || '' })).filter((a) => a.name && a.ecosystem).slice(0, 40),
   };
+}
+
+function extractCvss(vuln) {
+  for (const item of vuln.severity || []) if (item?.score) return String(item.score).slice(0, 160);
+  return null;
+}
+
+function cvss31BaseScore(vector) {
+  if (!/^CVSS:3\.[01]\//.test(vector)) return null;
+  const v = Object.fromEntries(vector.split('/').slice(1).map((part) => part.split(':')));
+  const av = { N: .85, A: .62, L: .55, P: .2 }[v.AV];
+  const ac = { L: .77, H: .44 }[v.AC];
+  const ui = { N: .85, R: .62 }[v.UI];
+  const scope = v.S;
+  const c = { H: .56, L: .22, N: 0 }[v.C]; const i = { H: .56, L: .22, N: 0 }[v.I]; const a = { H: .56, L: .22, N: 0 }[v.A];
+  const pr = scope === 'C' ? { N: .85, L: .68, H: .5 }[v.PR] : { N: .85, L: .62, H: .27 }[v.PR];
+  if ([av, ac, ui, c, i, a, pr, scope].some((x) => x === undefined)) return null;
+  const impactSub = 1 - (1-c)*(1-i)*(1-a);
+  const impact = scope === 'U' ? 6.42*impactSub : 7.52*(impactSub-.029)-3.25*Math.pow(impactSub-.02,15);
+  if (impact <= 0) return 0;
+  const exploit = 8.22*av*ac*pr*ui;
+  const raw = scope === 'U' ? Math.min(impact+exploit,10) : Math.min(1.08*(impact+exploit),10);
+  return Math.ceil(raw*10 - 1e-9)/10;
 }
 
 function scoreSeverity(vuln) {
@@ -411,6 +586,8 @@ function scoreSeverity(vuln) {
     }
     // CVSS vector string: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
     if (s.score.includes('CVSS')) {
+      const numericScore = cvss31BaseScore(s.score);
+      if (numericScore !== null) return numericScore >= 9 ? 'critical' : numericScore >= 7 ? 'high' : numericScore >= 4 ? 'medium' : 'low';
       const fromVector = severityFromCvssVector(s.score);
       if (fromVector) return fromVector;
     }
@@ -453,7 +630,7 @@ function buildFix(pkg, vuln) {
   const affected = vuln.affected || [];
   const ranges = [];
   for (const a of affected) {
-    if (a.package?.name !== pkg.name && a.package?.ecosystem !== pkg.ecosystem) continue;
+    if (a.package?.name !== pkg.name || a.package?.ecosystem !== pkg.ecosystem) continue;
     for (const r of a.ranges || []) {
       if (r.type !== 'ECOSYSTEM' && r.type !== 'SEMVER') continue;
       const fixed = (r.events || []).filter((e) => e.fixed).map((e) => e.fixed);

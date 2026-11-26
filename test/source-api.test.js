@@ -106,6 +106,26 @@ test('the source page is served with the strict policy', async () => {
   assert.doesNotMatch(html, /\sstyle=|\son[a-z]+=/i);
 });
 
+test('public advisory intelligence is cached as relationships without source inventory', async () => {
+  db.storeCveIntel([{
+    osvId: 'GHSA-demo-1234', cve: 'CVE-2024-12345', severity: 'critical', summary: 'Demo advisory', details: 'Public advisory detail',
+    cvss: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H', cvssBaseScore: 9.8, epss: { score: 0.42, percentile: 0.93 },
+    kev: { dateAdded: '2024-01-01', dueDate: '2024-02-01', requiredAction: 'Apply vendor patch' },
+    aliases: ['CVE-2024-12345', 'GHSA-demo-1234'], affectedPackages: [{ ecosystem: 'npm', name: 'demo-package' }],
+    advisoryReferences: [{ type: 'ADVISORY', url: 'https://example.org/advisory' }], affectedRanges: [{ type: 'SEMVER', events: [{ fixed: '2.0.0' }] }],
+  }]);
+  const res = await fetch(base + '/api/intel');
+  assert.equal(res.status, 200);
+  const { records } = await res.json();
+  const row = records.find((x) => x.osv_id === 'GHSA-demo-1234');
+  assert.ok(row);
+  assert.deepEqual(row.aliases, ['CVE-2024-12345', 'GHSA-demo-1234']);
+  assert.deepEqual(row.affectedPackages, [{ ecosystem: 'npm', name: 'demo-package' }]);
+  assert.equal(row.kev, true);
+  assert.equal(row.epss_score, 0.42);
+  assert.equal('file' in row, false);
+});
+
 test('source checks need the current terms, for JSON and zip uploads', async () => {
   const noTerms = await postJson('/api/source', { files: [{ path: 'a.js', content: 'x' }] }, null);
   assert.equal(noTerms.status, 400);
@@ -135,7 +155,8 @@ test('the CVE relay takes package names only, needs the terms, and validates inp
   assert.equal((await postJson('/api/cves', { packages: [] })).status, 400);
   assert.equal((await postJson('/api/cves', { packages: [{ ...pkg, ecosystem: 'evil' }] })).status, 400);
   assert.equal((await postJson('/api/cves', { packages: [{ ...pkg, name: 5 }] })).status, 400);
-  assert.equal((await postJson('/api/cves', { packages: Array.from({ length: 181 }, () => pkg) })).status, 400);
+  assert.equal((await postJson('/api/cves', { packages: [{ ...pkg, ecosystem: 'Go', name: 'github.com/gin-gonic/gin' }] })).status, 200);
+  assert.equal((await postJson('/api/cves', { packages: Array.from({ length: 1201 }, () => pkg) })).status, 400);
 });
 
 test('source checks are rate limited per visitor', async () => {

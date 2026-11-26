@@ -200,8 +200,8 @@ test('delete: only the browser that started the scan can delete the report', asy
 test('health answers for monitors, backups keep only the newest copies', async () => {
   const h = await call('/api/health', 'GET');
   assert.equal(h.status, 200);
-  assert.equal(h.body.database, 'ok');
-  assert.equal(typeof h.body.uptimeSeconds, 'number');
+  assert.deepEqual(Object.keys(h.body), ['ok']);
+  assert.equal(h.body.ok, true);
 
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'flawradar-bk-'));
   for (let i = 0; i < 4; i += 1) runBackup({ dir, keep: 2, now: new Date(Date.UTC(2026, 10, 20 + i, 3, 0, 0)) });
