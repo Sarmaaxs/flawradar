@@ -704,3 +704,21 @@ a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visibl
 @media (max-width: 600px) {
   .site-head select { position: static; display: block; margin-top: .5rem; }
 }
+
+/* Language marquee: grey names drift right to left and loop without a jump.
+   The track holds the list twice and moves exactly half its width. */
+.language-marquee { overflow: hidden; margin: .8rem 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+.language-marquee-track { display: flex; width: max-content; }
+.language-marquee-track span { flex: none; padding: .5rem 2.2rem .5rem 0; color: #8a8672; font: .9rem var(--mono); white-space: nowrap; }
+.language-stack-list { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes language-drift { to { transform: translateX(-50%); } }
+  .language-marquee-track { animation: language-drift 34s linear infinite; }
+  .language-marquee:hover .language-marquee-track { animation-play-state: paused; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .language-marquee { -webkit-mask-image: none; mask-image: none; }
+  .language-marquee-track { width: auto; flex-wrap: wrap; }
+  .language-marquee-track span:nth-child(n+15) { display: none; }
+}
+@media print { .language-marquee { display: none; } }
