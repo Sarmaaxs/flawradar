@@ -722,3 +722,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visibl
   .language-marquee-track span:nth-child(n+15) { display: none; }
 }
 @media print { .language-marquee { display: none; } }
+
+/* The languages section is one column now that the radar is gone. */
+.language-stack { display: block; }
+.language-stack-content { max-width: none; }
