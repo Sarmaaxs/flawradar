@@ -3,6 +3,7 @@
 
 import { countUp, stagger } from './motion.js';
 import { h } from './dom.js';
+import { initLanguageSelector } from './i18n.js';
 
 const NAV = [
   ['scan', '/', 'Scan'],
@@ -274,87 +275,7 @@ class WDropzone extends HTMLElement {
 }
 
 
-// Optional Google Website Translator integration. The selector only offers language
-// codes supported by the translation widget; it does not claim 200 unsupported locales.
-const TRANSLATION_LANGUAGES = [
-  ['af','Afrikaans'],['sq','Albanian'],['am','Amharic'],['ar','Arabic'],['hy','Armenian'],
-  ['az','Azerbaijani'],['eu','Basque'],['be','Belarusian'],['bn','Bengali'],['bs','Bosnian'],
-  ['bg','Bulgarian'],['ca','Catalan'],['ceb','Cebuano'],['zh-CN','Chinese (Simplified)'],
-  ['zh-TW','Chinese (Traditional)'],['co','Corsican'],['hr','Croatian'],['cs','Czech'],
-  ['da','Danish'],['nl','Dutch'],['en','English'],['eo','Esperanto'],['et','Estonian'],
-  ['fi','Finnish'],['fr','French'],['fy','Frisian'],['gl','Galician'],['ka','Georgian'],
-  ['de','German'],['el','Greek'],['gu','Gujarati'],['ht','Haitian Creole'],['ha','Hausa'],
-  ['haw','Hawaiian'],['he','Hebrew'],['hi','Hindi'],['hmn','Hmong'],['hu','Hungarian'],
-  ['is','Icelandic'],['ig','Igbo'],['id','Indonesian'],['ga','Irish'],['it','Italian'],
-  ['ja','Japanese'],['jv','Javanese'],['kn','Kannada'],['kk','Kazakh'],['km','Khmer'],
-  ['rw','Kinyarwanda'],['ko','Korean'],['ku','Kurdish'],['ky','Kyrgyz'],['lo','Lao'],
-  ['la','Latin'],['lv','Latvian'],['lt','Lithuanian'],['lb','Luxembourgish'],['mk','Macedonian'],
-  ['mg','Malagasy'],['ms','Malay'],['ml','Malayalam'],['mt','Maltese'],['mi','Maori'],
-  ['mr','Marathi'],['mn','Mongolian'],['my','Myanmar (Burmese)'],['ne','Nepali'],['no','Norwegian'],
-  ['ny','Nyanja'],['or','Odia'],['ps','Pashto'],['fa','Persian'],['pl','Polish'],
-  ['pt','Portuguese'],['pa','Punjabi'],['ro','Romanian'],['ru','Russian'],['sm','Samoan'],
-  ['gd','Scots Gaelic'],['sr','Serbian'],['st','Sesotho'],['sn','Shona'],['sd','Sindhi'],
-  ['si','Sinhala'],['sk','Slovak'],['sl','Slovenian'],['so','Somali'],['es','Spanish'],
-  ['su','Sundanese'],['sw','Swahili'],['sv','Swedish'],['tl','Filipino'],['tg','Tajik'],
-  ['ta','Tamil'],['tt','Tatar'],['te','Telugu'],['th','Thai'],['tr','Turkish'],
-  ['tk','Turkmen'],['uk','Ukrainian'],['ur','Urdu'],['ug','Uyghur'],['uz','Uzbek'],
-  ['vi','Vietnamese'],['cy','Welsh'],['xh','Xhosa'],['yi','Yiddish'],['yo','Yoruba'],['zu','Zulu'],
-  ['om','Oromo'],['ti','Tigrinya'],['as','Assamese'],['ak','Twi'],['ay','Aymara'],['bm','Bambara'],['dv','Dhivehi'],['ee','Ewe'],['gn','Guarani'],['ln','Lingala'],['lg','Luganda'],['qu','Quechua'],['sa','Sanskrit'],['ts','Tsonga'],['nso','Sepedi'],['ckb','Kurdish (Sorani)'],
-];
-function initLanguageSelector() {
-  const picker = document.getElementById('flawradar-language');
-  if (!picker || picker.dataset.ready) return;
-  picker.dataset.ready = '1';
-  const options = [...TRANSLATION_LANGUAGES].sort((a, b) => a[1].localeCompare(b[1])).map(([code, name]) => {
-    const option = document.createElement('option');
-    option.value = code;
-    option.textContent = name;
-    return option;
-  });
-  picker.append(...options);
-  picker.addEventListener('change', () => {
-    if (!picker.value) return;
-    const select = document.querySelector('.goog-te-combo');
-    if (select) {
-      select.value = picker.value === 'en' ? '' : picker.value;
-      select.dispatchEvent(new Event('change'));
-      return;
-    }
-    window.__flawRadarPendingLanguage = picker.value;
-    if (!document.getElementById('google-translate-script')) {
-      window.googleTranslateElementInit = () => {
-        new window.google.translate.TranslateElement({
-          pageLanguage: 'en', includedLanguages: TRANSLATION_LANGUAGES.map(([code]) => code).join(','),
-          autoDisplay: false,
-        }, 'google_translate_element');
-        // Google builds its hidden language box a moment after this callback, so wait for it.
-        let tries = 0;
-        const wait = window.setInterval(() => {
-          const combo = document.querySelector('.goog-te-combo');
-          tries += 1;
-          if (combo && window.__flawRadarPendingLanguage) {
-            window.clearInterval(wait);
-            combo.value = window.__flawRadarPendingLanguage === 'en' ? '' : window.__flawRadarPendingLanguage;
-            combo.dispatchEvent(new Event('change'));
-          } else if (tries > 80) {
-            window.clearInterval(wait);
-          }
-        }, 100);
-      };
-      const mount = document.createElement('div');
-      mount.id = 'google_translate_element';
-      mount.hidden = true;
-      document.body.append(mount);
-      const script = document.createElement('script');
-      script.id = 'google-translate-script';
-      script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-      script.async = true;
-      document.head.append(script);
-    }
-  });
-}
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initLanguageSelector);
-else initLanguageSelector();
+// Language choice is handled by i18n.js (built in, no third party).
 
 for (const [name, cls] of [
   ['w-dropzone', WDropzone],

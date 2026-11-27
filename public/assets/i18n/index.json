@@ -1,0 +1,27 @@
+[
+ {
+  "code": "en",
+  "name": "English"
+ },
+ {
+  "code": "am",
+  "name": "አማርኛ (Amharic)"
+ },
+ {
+  "code": "om",
+  "name": "Afaan Oromoo"
+ },
+ {
+  "code": "ar",
+  "name": "العربية (Arabic)",
+  "dir": "rtl"
+ },
+ {
+  "code": "fr",
+  "name": "Français"
+ },
+ {
+  "code": "es",
+  "name": "Español"
+ }
+]
