@@ -504,3 +504,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visibl
   * { animation: none !important; transition: none !important; }
   .pre { opacity: 1 !important; transform: none !important; }
 }
+
+/* Phones: long lines and tables wrap instead of pushing the page sideways. */
+@media (max-width: 600px) {
+  pre, code, td, th, .where, .mono { overflow-wrap: anywhere; }
+  w-copy pre, .snippet, pre.evidence { white-space: pre-wrap; word-break: break-all; }
+  table { display: block; overflow-x: auto; }
+}
