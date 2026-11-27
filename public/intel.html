@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Domain Intelligence - FlawRadar</title>
-<meta name="description" content="Map a verified domain's public attack surface, infrastructure relationships, technologies and known vulnerabilities.">
+<meta name="description" content="Map a domain's public attack surface, infrastructure relationships, technologies and known vulnerabilities.">
 <link rel="stylesheet" href="/assets/css/flawradar.css">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 </head>
@@ -22,7 +22,7 @@
         <label for="intel-host">Domain or website</label>
         <div class="intel-tools">
           <input id="intel-host" type="text" inputmode="url" autocomplete="url" placeholder="example.com" required>
-          <button id="intel-prepare" type="submit">Prepare verification</button>
+          <button id="intel-prepare" type="submit">Start investigation</button>
         </div>
         <div class="check">
           <input id="intel-terms" type="checkbox" required>
@@ -31,15 +31,7 @@
         <p id="intel-error" class="alert" role="alert" hidden></p>
       </fieldset>
     </form>
-    <section id="intel-proof" class="intel-proof" hidden>
-      <h2>Step 1 — verify domain control</h2>
-      <p>Choose either proof method below. Add the exact token to DNS or serve it as a file on the exact hostname. Then press Check verification. FlawRadar will not begin the investigation until it finds the token. DNS changes may take time to propagate.</p>
-      <div class="intel-proof-grid">
-        <div><h3>Option A — DNS TXT record</h3><p>Name</p><code id="intel-dns-name"></code><p>Value</p><w-copy id="intel-dns-value"></w-copy></div>
-        <div><h3>Option B — verification file</h3><p>Path</p><code id="intel-file-path"></code><p>Contents</p><w-copy id="intel-file-value"></w-copy></div>
-      </div>
-      <div class="intel-tools"><button id="intel-check-proof" type="button">Check verification</button><span id="intel-proof-status" role="status" class="muted"></span></div>
-    </section>
+
   </section>
 
   <section id="intel-results" hidden>
@@ -59,7 +51,7 @@
     <section class="intel-path-panel" aria-labelledby="intel-path-title">
       <div><h3 id="intel-path-title">Network route</h3><p id="intel-path-summary" class="muted">No route data available.</p></div>
       <ol id="intel-path-hops" class="intel-path-hops"></ol>
-      <small>Low-volume UDP traceroute to the verified hostname's resolved public IP. Routers may suppress probes; missing hops are not proof of a fault. RTT is diagnostic, not a security rating.</small>
+      <small>Low-volume UDP traceroute to the target hostname's resolved public IP. Routers may suppress probes; missing hops are not proof of a fault. RTT is diagnostic, not a security rating.</small>
     </section>
     <div class="intel-workspace">
       <aside class="intel-inspector">

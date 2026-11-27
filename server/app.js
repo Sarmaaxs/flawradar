@@ -60,10 +60,11 @@ function securityHeaders() {
   const h = {
     'Content-Security-Policy': [
       "default-src 'none'",
-      "script-src 'self'",
-      "style-src 'self'",
+      "script-src 'self' https://translate.google.com https://translate.googleapis.com",
+      "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data:",
-      "connect-src 'self'",
+      "connect-src 'self' https://translate.googleapis.com",
+      "frame-src https://translate.google.com",
       "base-uri 'none'",
       "form-action 'self'",
       "frame-ancestors 'none'",
@@ -263,10 +264,6 @@ const api = {
     requireTerms(body.terms);
     const target = parseTarget(body.host);
     await resolvePublic(target.host);
-    const proof = await checkOwnership(target);
-    if (!proof.verified) {
-      throw new AppError(403, 'needs_verification', 'Verify control of this exact host before running domain intelligence.', { verifyUrl: `/verify?host=${encodeURIComponent(target.host)}` });
-    }
     const pageEvidence = [];
     let robotsInfo = null;
     const [baseline, networkPath] = await Promise.all([

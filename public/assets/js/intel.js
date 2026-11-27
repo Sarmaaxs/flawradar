@@ -34,44 +34,18 @@ $('#intel-form').addEventListener('submit', async (event) => {
   if (!host) return error('Enter a domain name.');
   if (!$('#intel-terms').checked) return error('Confirm that you own this domain or have written permission to assess it.');
   const button = $('#intel-prepare');
-  button.disabled = true; button.textContent = 'Preparing…';
+  button.disabled = true; button.textContent = 'Investigating…';
   try {
     await loadTerms();
-    const proof = await api('/api/verify', { method: 'POST', body: JSON.stringify({ host }) });
-    state.host = proof.host;
-    $('#intel-host').value = proof.host;
-    $('#intel-dns-name').textContent = proof.dns.name;
-    const dnsCopy = document.createElement('w-copy'); dnsCopy.id = 'intel-dns-value'; dnsCopy.textContent = proof.dns.value;
-    $('#intel-dns-value').replaceWith(dnsCopy);
-    $('#intel-file-path').textContent = proof.file.path;
-    const fileCopy = document.createElement('w-copy'); fileCopy.id = 'intel-file-value'; fileCopy.textContent = proof.file.content;
-    $('#intel-file-value').replaceWith(fileCopy);
-    $('#intel-proof').hidden = false;
-    $('#intel-proof-status').textContent = 'Add one proof method, then check it.';
-    $('#intel-results').hidden = true;
-  } catch (err) { error(err.message); }
-  finally { button.disabled = false; button.textContent = 'Prepare verification'; }
-});
-
-$('#intel-check-proof').addEventListener('click', async () => {
-  const button = $('#intel-check-proof');
-  const status = $('#intel-proof-status');
-  button.disabled = true; button.textContent = 'Checking…'; status.textContent = '';
-  try {
-    const result = await api('/api/verify/check', { method: 'POST', body: JSON.stringify({ host: state.host }) });
-    if (!result.verified) {
-      status.textContent = 'Proof not found yet. Check the DNS name/value or file path and try again.';
-      return;
-    }
-    status.textContent = 'Verified. Building the domain relationship map…';
+    state.host = host;
     const data = await api('/api/intelligence', {
       method: 'POST',
-      body: JSON.stringify({ host: state.host, terms: termsVersion }),
+      body: JSON.stringify({ host, terms: termsVersion }),
     });
     state.data = data; state.selected = null;
     showResults(data);
-  } catch (err) { status.textContent = err.message; }
-  finally { button.disabled = false; button.textContent = 'Check verification'; }
+  } catch (err) { error(err.message); }
+  finally { button.disabled = false; button.textContent = 'Start investigation'; }
 });
 
 function showResults(data) {
@@ -95,7 +69,7 @@ function showResults(data) {
   renderFindings();
   const notices = $('#intel-notices'); notices.replaceChildren();
   (data.notices || []).forEach((n) => notices.append(el('p', n, 'intel-notice')));
-  $('#intel-proof-status').textContent = 'Investigation complete.';
+
   $('#intel-results').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -306,7 +280,7 @@ mapSvg.addEventListener('pointerdown', (event) => {
 });
 $('#intel-new').addEventListener('click', () => {
   state.data = null; state.selected = null; state.positions.clear(); state.panX = 0; state.panY = 0; state.zoom = 1;
-  $('#intel-results').hidden = true; $('#intel-proof').hidden = true;
+  $('#intel-results').hidden = true;
   $('#intel-host').value = ''; $('#intel-terms').checked = false;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
