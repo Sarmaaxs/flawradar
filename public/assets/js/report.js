@@ -1,4 +1,5 @@
 import { codeTabs } from './components.js';
+import { reproduce } from './reproduce.js';
 import { crossfade, stagger } from './motion.js';
 import { api, deleteTokenFor, forgetDeleteToken, formatDate, h, rememberDeleteToken, rememberedTerms, safeHttpsUrl, scannerInfo } from './dom.js';
 
@@ -40,6 +41,13 @@ function findingNode(f) {
   if (f.fix) {
     body.append(h('p', {}, h('b', {}, 'How to fix. '), f.fix.text));
     if (f.fix.snippets && Object.keys(f.fix.snippets).length) body.append(codeTabs(f.fix.snippets, TAB_LABELS));
+  }
+  const cmd = reproduce(f, scan?.host);
+  if (cmd) {
+    const copy = document.createElement('w-copy');
+    copy.setAttribute('label', 'Run this in a terminal to see it yourself');
+    copy.textContent = cmd;
+    body.append(copy);
   }
   const ref = safeHttpsUrl(f.ref);
   if (ref) body.append(h('p', {}, h('a', { href: ref, rel: 'noopener noreferrer', target: '_blank' }, 'Reference')));
@@ -157,6 +165,8 @@ function reportText(s) {
       lines.push(`[${label[f.status] || f.status}] ${f.title}`);
     if (f.detail) lines.push(`  What we saw: ${f.detail}`);
     if (f.why && f.status !== 'pass') lines.push(`  Why it matters: ${f.why}`);
+    const cmd = reproduce(f, s.host);
+    if (cmd) lines.push('  Check it yourself:', ...cmd.split('\n').map((l) => `    ${l}`));
     if (f.fix) lines.push(`  What to do: ${f.fix.text}`);
     if (f.fix?.snippets) for (const [k, v] of Object.entries(f.fix.snippets)) lines.push(`  --- ${TAB_LABELS[k] || k} ---`, ...String(v).split('\n').map((l) => `  ${l}`));
     lines.push('');
