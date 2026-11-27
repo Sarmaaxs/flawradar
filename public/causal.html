@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Causal Exposure Engine - FlawRadar</title>
+<meta name="description" content="Correlate an authorized domain's public attack surface with source routes, request-to-sink findings and dependency evidence.">
+<link rel="stylesheet" href="/assets/css/flawradar.css">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<w-header current="causal"></w-header>
+<main class="domain-intel-page">
+  <p class="muted">FLAWRADAR / RESEARCH ENGINE</p>
+  <h1>Causal Exposure Engine</h1>
+  <p class="lead">Correlate a domain's observed public endpoints and technologies with the source code you provide. Results are evidence-backed candidates, not proof of exploitability.</p>
+  <div class="notice">
+    <b>Authorization and source handling.</b> You must prove control of the domain through the Verify page. Source files are analyzed in memory and are not intentionally persisted. The engine does not send exploit payloads, submit forms, attempt logins or modify the target.
+  </div>
+  <section class="intel-start">
+    <form id="causal-form" novalidate>
+      <fieldset>
+        <legend>Authorized target</legend>
+        <label for="causal-host">Domain name</label>
+        <div class="intel-tools">
+          <input id="causal-host" type="text" inputmode="url" autocomplete="url" placeholder="example.com" required>
+          <button id="causal-run" type="submit">Build causal graph</button>
+        </div>
+        <p class="muted">Before running, <a href="/verify">prove domain ownership</a>.</p>
+        <div class="check">
+          <input id="causal-terms" type="checkbox" required>
+          <label for="causal-terms">I own this domain or have written permission to assess it, I am authorized to share this source code, and I accept the <a href="/terms">Terms</a>, <a href="/acceptable-use">Acceptable Use Policy</a> and <a href="/privacy">Privacy Policy</a>.</label>
+        </div>
+      </fieldset>
+    </form>
+    <h2>Source code</h2>
+    <p>Choose the application folder or its source files. If you have a ZIP, extract it first and choose the folder.</p>
+    <w-dropzone id="causal-drop"></w-dropzone>
+    <p id="causal-selection" class="muted" aria-live="polite">No source files selected.</p>
+    <p id="causal-status" class="muted" role="status" aria-live="polite" hidden></p>
+    <p id="causal-error" class="alert" role="alert" hidden></p>
+  </section>
+  <section id="causal-results" hidden>
+    <div class="intel-results-head">
+      <div><h2 id="causal-result-host"></h2><p id="causal-generated" class="muted"></p></div>
+      <div class="intel-tools"><button id="causal-export" type="button">Export JSON</button><button id="causal-reset" type="button" class="secondary">New analysis</button></div>
+    </div>
+    <div class="intel-metrics">
+      <div class="intel-metric"><b>Graph nodes</b><span id="causal-nodes">0</span></div>
+      <div class="intel-metric"><b>Relationships</b><span id="causal-edges">0</span></div>
+      <div class="intel-metric"><b>Matched routes</b><span id="causal-routes">0</span></div>
+      <div class="intel-metric"><b>Candidate paths</b><span id="causal-paths">0</span></div>
+      <div class="intel-metric"><b>High-confidence paths</b><span id="causal-high">0</span></div>
+    </div>
+    <section class="intel-findings">
+      <h2>Reachability paths</h2>
+      <p class="muted">Each path is a candidate correlation. Review the source and controls before drawing conclusions.</p>
+      <div id="causal-path-list"></div>
+    </section>
+    <section class="intel-findings">
+      <h2>Dependency and surface drift</h2>
+      <div id="causal-drift-list"></div>
+    </section>
+    <section class="intel-findings">
+      <h2>Temporal drift and advisory changes</h2>
+      <div id="causal-temporal-list"></div>
+    </section>
+    <section class="intel-findings">
+      <h2>Highest-impact remediation candidates</h2>
+      <div id="causal-fix-list"></div>
+    </section>
+    <section class="intel-findings">
+      <h2>Safe verification witnesses</h2>
+      <p class="muted">These are analyst procedures only. FlawRadar does not generate or transmit exploit payloads.</p>
+      <div id="causal-witness-list"></div>
+    </section>
+    <section class="intel-findings">
+      <h2>Evidence graph</h2>
+      <div class="toolbar"><label for="causal-node-filter">Node type</label><select id="causal-node-filter"><option value="all">All</option></select></div>
+      <div id="causal-graph-list"></div>
+    </section>
+    <div id="causal-notices"></div>
+    <p id="causal-limitations" class="muted"></p>
+  </section>
+</main>
+<w-footer></w-footer>
+<script type="module" src="/assets/js/causal.js"></script>
+</body>
+</html>

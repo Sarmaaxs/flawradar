@@ -17,10 +17,9 @@ $('#terms').addEventListener('change', () => $('#consent-box').classList.remove(
 const SEVERITIES = ['critical', 'high', 'medium', 'low'];
 const COLOUR = { critical: 'fail', high: 'fail', medium: 'warn', low: 'info' };
 
-// The check runs here, in the browser, with the same rule files the server uses.
-// Limits are the same as the API's. Nothing in this page sends the code anywhere.
-// Only package names and versions go to the server, and only to look up known vulnerabilities.
-// A failed lookup becomes a note on the results instead of an error.
+// Files are selected in the browser and analyzed by the server in memory.
+// The server-side rule implementation is not shipped to the browser.
+// Dependency identifiers may be sent to public advisory databases for matching.
 const limits = { maxFiles: 3000, maxFileKb: 512, maxZipMb: 10, maxTotalMb: 30 };
 
 function status(message) {

@@ -12,7 +12,7 @@
 <w-header current="source"></w-header>
 
 <main>
-  <p><a class="button" href="/intelligence">Open domain intelligence</a></p>
+  <p><a class="button" href="/intelligence">Open domain intelligence</a> <a class="button secondary" href="/causal">Open Causal Exposure Engine</a></p>
   <h1>Check your source code</h1>
   <p class="lead">Drop the folder (or a .zip) of your website's code. FlawRadar checks for exposed secrets, injection patterns, unsafe data flows, weak cryptography and risky configuration. Detection runs on the server so its rule implementation is not shipped to every visitor.</p>
 
@@ -51,7 +51,7 @@
 
   <h2>What this can and cannot do</h2>
   <ul>
-    <li>It matches patterns line by line. It finds the common, obvious mistakes. It does not follow data from a request to a database call, so it will miss bugs that are spread over several lines or files, and logic errors such as missing permission checks.</li>
+    <li>It matches patterns line by line and tracks selected request-derived values through variables inside one file. It does not yet trace data across files or functions, and it cannot prove authorization logic.</li>
     <li>Some matches are lookalikes. Each finding says how sure the rule is (high, medium or low confidence). Read the line before changing anything.</li>
     <li>It looks up known vulnerabilities in dependencies via the OSV database when a lockfile or pinned requirements file is present. Coverage is not complete; also run <code>npm audit</code>, <code>pip-audit</code> or <code>osv-scanner</code> in CI.</li>
     <li>A clean result means none of these patterns matched. It does not mean the code is secure.</li>

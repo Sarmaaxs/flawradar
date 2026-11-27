@@ -111,6 +111,7 @@ server/
     tls.js            TLS handshake and certificate diagnostics
     dnsinfo.js        DNS security and mail-policy lookups
     intelligence.js   asset graph, technology fingerprinting and CVE correlation
+    causal.js         domain/source reachability graph, safe verification witnesses and temporal graph diff
     route.js          bounded UDP traceroute parser and route metrics
     risk.js           explainable CVSS/EPSS/KEV priority calculation
     score.js          baseline grade and severity caps
@@ -152,6 +153,7 @@ The web interface is built without `innerHTML`, and the site serves a strict Con
 | `POST /api/source` | Body `{"files": [{"path": "src/a.js", "content": "..."}]}`. Returns findings, nothing stored |
 | `POST /api/source/zip` | Body is the raw .zip, `Content-Type: application/zip` |
 | `POST /api/intelligence` | Owner-verified domain relationship map, network path diagnostics and security findings |
+| `POST /api/causal` | Combines a domain investigation with supplied source files into a candidate reachability/sink graph; body includes `host`, `terms`, `files`, and optionally a prior graph in `previous` |
 | `POST /api/watch` | Body `{"url", "email", "terms"}`. Starts a watch; a confirmation link is emailed |
 | `DELETE /api/scans/:id` | Header `X-FlawRadar-Delete` with the secret returned when the scan was created |
 | `GET /api/scanner` | Published scanner addresses, terms version and required public legal metadata |
@@ -162,6 +164,14 @@ The web interface is built without `innerHTML`, and the site serves a strict Con
 The source checker analyzes selected files on the server after upload over HTTPS. Files are processed in memory and raw source contents are not intentionally persisted. The detection engine is not sent as browser JavaScript. Findings include severity, a short explanation and a remediation direction; secret values are masked. Dependency advisories are best-effort and depend on the package ecosystem and version data available in the supplied manifests.
 
 Uploads are bounded by file count, per-file size, total text size and ZIP expansion limits. Generated files and common dependency folders are skipped. Do not upload code you are not authorized to share with the service.
+
+### Causal Exposure Engine
+
+`POST /api/causal` accepts `{ "host": "example.com", "terms": "<current terms version>", "files": [{ "path": "src/routes.js", "content": "..." }] }`. The host must pass public-address validation and DNS/file ownership proof. The route performs the existing bounded baseline/domain investigation, analyzes the supplied source in memory, and returns one evidence graph. It accepts an optional previous response as `previous` to calculate graph drift.
+
+The graph correlates observed endpoint paths with candidate source route declarations, same-file request-to-sink findings, supported lockfile dependencies, observed technologies and domain CVE candidates. It links route files to dependencies only when a literal import/require is observed, flags low-confidence live/source version disagreements, extracts nearby auth/validation/regex/sanitizer guard evidence, and emits safe manual verification witnesses. Remediation groups include a graph-linked counterfactual showing which candidate paths would be removed by addressing those findings. Supplying a previous response adds graph and advisory/EPSS/KEV drift comparisons. Witnesses never contain exploit payloads and FlawRadar does not send them. Observed guards lower confidence; they do not prove that a path is unreachable.
+
+Current limitations are explicit: route extraction is pattern-based, the existing taint engine is same-file only, and dependency reachability is linked only when a literal import/require is found in a route file. A version banner or advisory match is not proof that a vulnerable function is reachable. The response is request-scoped; source contents and causal graphs are not persisted. This first implementation does not claim Bayesian exploit probabilities, patch application or test-based patch verification, cross-file call-graph completeness, or active differential protocol probing.
 
 ## Domain intelligence and researcher evidence
 

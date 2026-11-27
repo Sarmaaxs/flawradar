@@ -10,6 +10,7 @@ const NAV = [
   ['whitelist', '/whitelist', 'Whitelist'],
   ['source', '/source', 'Source code'],
   ['intel', '/intel', 'Intel'],
+  ['causal', '/causal', 'Causal Engine'],
   ['verify', '/verify', 'Verify'],
   ['about', '/about', 'About'],
 ];

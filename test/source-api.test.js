@@ -97,6 +97,24 @@ test('nothing from an upload is stored', async () => {
   assert.equal((await fetch(base + '/assets/engine/analyze.js')).status, 404);
 });
 
+test('Causal Exposure Engine page and browser module are served', async () => {
+  const page = await fetch(base + '/causal');
+  assert.equal(page.status, 200);
+  assert.match(await page.text(), /Causal Exposure Engine/);
+  const script = await fetch(base + '/assets/js/causal.js');
+  assert.equal(script.status, 200);
+  assert.ok((await script.text()).includes("api('/api/causal'"));
+});
+
+test('causal exposure requires current terms before processing a host or source archive', async () => {
+  const stale = await postJson('/api/causal', {
+    host: 'example.com',
+    files: [{ path: 'src/app.js', content: "app.get('/api', handler);" }],
+  }, 'old');
+  assert.equal(stale.status, 400);
+  assert.equal(stale.body.error.code, 'terms_required');
+});
+
 test('domain intelligence requires the current terms before processing a target', async () => {
   const stale = await postJson('/api/intelligence', { host: 'example.com' }, 'old');
   assert.equal(stale.status, 400);

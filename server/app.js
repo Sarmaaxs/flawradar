@@ -18,6 +18,7 @@ import { lookupCves } from './source/cves.js';
 import { readZip } from './source/zip.js';
 import { runScan } from './scanner/scan.js';
 import { runDomainIntelligence } from './scanner/intelligence.js';
+import { buildCausalExposure } from './scanner/causal.js';
 import { traceVerifiedHost } from './scanner/route.js';
 
 const PUBLIC = path.join(config.root, 'public');
@@ -47,6 +48,7 @@ const PAGES = {
   '/cve': 'cve.html',
   '/intel': 'intel.html',
   '/intelligence': 'intel.html',
+  '/causal': 'causal.html',
   '/about': 'about.html',
   '/terms': 'terms.html',
   '/acceptable-use': 'acceptable-use.html',
@@ -398,6 +400,45 @@ const api = {
 
 
 
+  // Combines an authorized passive domain investigation with a user-supplied source archive.
+  // Source contents are analysed in memory and are never persisted.
+  async causalExposure(req, res) {
+    const sourceHit = sourceLimiter.hit(clientIp(req));
+    if (!sourceHit.ok) throw new AppError(429, 'rate_limited', 'Too many source checks. Try again later.', { retryAfter: sourceHit.retryAfter });
+    const intelHit = intelligenceLimiter.hit(clientIp(req));
+    if (!intelHit.ok) throw new AppError(429, 'rate_limited', 'Too many domain investigations. Try again later.', { retryAfter: intelHit.retryAfter });
+    const body = await readJson(req, config.maxSourceJsonBytes + 64 * 1024);
+    requireTerms(body.terms);
+    const target = parseTarget(body.host);
+    await resolvePublic(target.host);
+    const proof = await checkOwnership(target);
+    if (!proof.verified) throw new AppError(403, 'needs_verification', 'Causal domain/source correlation requires proof that you control this host.', { host: target.host, tried: proof.tried });
+    if (!Array.isArray(body.files) || !body.files.length) throw new AppError(400, 'no_files', 'Add source files to correlate with the domain.');
+    if (body.files.length > config.maxSourceFiles) throw new AppError(413, 'too_many_files', 'The source archive exceeds the configured file limit.');
+    const files = [];
+    let bytes = 0;
+    for (const file of body.files) {
+      if (!file || typeof file.path !== 'string' || typeof file.content !== 'string') throw new AppError(400, 'bad_files', 'Each source file needs a text path and text content.');
+      bytes += file.content.length;
+      if (bytes > config.maxSourceTotalBytes) throw new AppError(413, 'too_large', 'The source archive exceeds the configured size limit.');
+      files.push({ path: file.path.slice(0, 500), content: file.content });
+    }
+    const pages = [];
+    let robotsInfo = null;
+    const [baseline, networkPath] = await Promise.all([
+      runScan(target, { deep: false, onPage: (page) => pages.push(page), onRobots: (info) => { robotsInfo = info; } }),
+      traceVerifiedHost(target.host),
+    ]);
+    const domain = await runDomainIntelligence(target, { baseScan: baseline, pages, robotsInfo, networkPath });
+    const source = await analyzeFiles(files, { maxFileBytes: config.maxFileBytes });
+    const result = buildCausalExposure({ domain, source, files, previous: body.previous || null });
+    result.domainSummary = domain.summary;
+    result.sourceSummary = source.summary;
+    result.sourceStats = source.stats;
+    result.notices.push(...(domain.notices || []), ...(source.notices || []));
+    sendJson(res, 200, result);
+  },
+
   // Source code arrives as JSON: { files: [{ path, content }] }. It is analysed
   // in memory and thrown away. Nothing about it is stored.
   async source(req, res) {
@@ -487,6 +528,7 @@ const routes = [
   ['GET', /^\/api\/health$/, api.health],
   ['GET', /^\/api\/scanner$/, api.scanner],
   ['POST', /^\/api\/intelligence$/, api.domainIntelligence],
+  ['POST', /^\/api\/causal$/, api.causalExposure],
   ['POST', /^\/api\/scans$/, api.createScan],
   ['GET', new RegExp(`^/api/scans/(${ID})$`), api.getScan],
   ['DELETE', new RegExp(`^/api/scans/(${ID})$`), api.deleteScan],
