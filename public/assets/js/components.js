@@ -316,7 +316,7 @@ function initLanguageSelector() {
     if (!picker.value) return;
     const select = document.querySelector('.goog-te-combo');
     if (select) {
-      select.value = picker.value;
+      select.value = picker.value === 'en' ? '' : picker.value;
       select.dispatchEvent(new Event('change'));
       return;
     }
@@ -327,11 +327,19 @@ function initLanguageSelector() {
           pageLanguage: 'en', includedLanguages: TRANSLATION_LANGUAGES.map(([code]) => code).join(','),
           autoDisplay: false,
         }, 'google_translate_element');
-        const combo = document.querySelector('.goog-te-combo');
-        if (combo && window.__flawRadarPendingLanguage) {
-          combo.value = window.__flawRadarPendingLanguage;
-          combo.dispatchEvent(new Event('change'));
-        }
+        // Google builds its hidden language box a moment after this callback, so wait for it.
+        let tries = 0;
+        const wait = window.setInterval(() => {
+          const combo = document.querySelector('.goog-te-combo');
+          tries += 1;
+          if (combo && window.__flawRadarPendingLanguage) {
+            window.clearInterval(wait);
+            combo.value = window.__flawRadarPendingLanguage === 'en' ? '' : window.__flawRadarPendingLanguage;
+            combo.dispatchEvent(new Event('change'));
+          } else if (tries > 80) {
+            window.clearInterval(wait);
+          }
+        }, 100);
       };
       const mount = document.createElement('div');
       mount.id = 'google_translate_element';
