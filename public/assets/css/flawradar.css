@@ -714,7 +714,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visibl
 @media (prefers-reduced-motion: no-preference) {
   @keyframes language-drift { to { transform: translateX(-50%); } }
   .language-marquee-track { animation: language-drift 34s linear infinite; }
-  .language-marquee:hover .language-marquee-track { animation-play-state: paused; }
 }
 @media (prefers-reduced-motion: reduce) {
   .language-marquee { -webkit-mask-image: none; mask-image: none; }

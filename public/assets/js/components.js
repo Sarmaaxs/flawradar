@@ -299,12 +299,13 @@ const TRANSLATION_LANGUAGES = [
   ['ta','Tamil'],['tt','Tatar'],['te','Telugu'],['th','Thai'],['tr','Turkish'],
   ['tk','Turkmen'],['uk','Ukrainian'],['ur','Urdu'],['ug','Uyghur'],['uz','Uzbek'],
   ['vi','Vietnamese'],['cy','Welsh'],['xh','Xhosa'],['yi','Yiddish'],['yo','Yoruba'],['zu','Zulu'],
+  ['om','Oromo'],['ti','Tigrinya'],['as','Assamese'],['ak','Twi'],['ay','Aymara'],['bm','Bambara'],['dv','Dhivehi'],['ee','Ewe'],['gn','Guarani'],['ln','Lingala'],['lg','Luganda'],['qu','Quechua'],['sa','Sanskrit'],['ts','Tsonga'],['nso','Sepedi'],['ckb','Kurdish (Sorani)'],
 ];
 function initLanguageSelector() {
   const picker = document.getElementById('flawradar-language');
   if (!picker || picker.dataset.ready) return;
   picker.dataset.ready = '1';
-  const options = TRANSLATION_LANGUAGES.map(([code, name]) => {
+  const options = [...TRANSLATION_LANGUAGES].sort((a, b) => a[1].localeCompare(b[1])).map(([code, name]) => {
     const option = document.createElement('option');
     option.value = code;
     option.textContent = name;
@@ -371,3 +372,6 @@ export function codeTabs(snippets, labels = {}) {
   }
   return tabs;
 }
+
+// The header is created above, so fill the picker now that it exists.
+initLanguageSelector();
