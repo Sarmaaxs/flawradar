@@ -85,6 +85,70 @@ function plainWords(r) {
   box.hidden = false;
 }
 
+const SVG = 'http://www.w3.org/2000/svg';
+function svg(tag, attrs = {}, ...kids) {
+  const el = document.createElementNS(SVG, tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
+  el.append(...kids);
+  return el;
+}
+
+function renderRisk(r) {
+  const risk = r.exposure;
+  const box = $('#risk');
+  if (!risk) { box.hidden = true; return; }
+  $('#risk-line').replaceChildren(h('b', {}, `${risk.percent}% modelled chance of a successful attack. `), `Level: ${risk.level}.`);
+  $('#risk .riskbar i').style.setProperty('--fill', String(Math.min(1, risk.probability)));
+  $('#risk-chains').replaceChildren(...risk.chains.map((c) => h('p', { class: 'alert warn' }, h('b', {}, `${c.name}. `), c.story)));
+  const rows = risk.ranked.slice(0, 6).map((x) => h('li', {}, h('b', {}, x.title), `. Fixing it takes the figure from ${risk.percent}% to about ${x.after}%.`));
+  $('#risk-order').replaceChildren(...(rows.length ? rows : [h('li', {}, 'Nothing to fix.')]));
+  box.hidden = false;
+}
+
+/** Radial map: the site in the middle, one dot per request, grouped by step. */
+function renderMap(r, host) {
+  const reqs = r.requests || [];
+  const box = $('#map');
+  if (!reqs.length) { box.hidden = true; return; }
+  const W = 640;
+  const H = 440;
+  const cx = W / 2;
+  const cy = H / 2;
+  const phases = [...new Set(reqs.map((q) => q.phase))];
+  const cls = (q) => (q.error || !q.status ? 'se' : `s${Math.floor(q.status / 100)}`);
+  const root = svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `Map of ${reqs.length} requests sent to ${host}`, class: 'reqmap' });
+  const dots = [];
+  phases.forEach((phase, pi) => {
+    const items = reqs.filter((q) => q.phase === phase);
+    const sector = (2 * Math.PI) / phases.length;
+    const mid = pi * sector - Math.PI / 2 + sector / 2;
+    const spread = sector * 0.72;
+    items.forEach((q, i) => {
+      const t = items.length === 1 ? 0.5 : i / (items.length - 1);
+      const angle = mid - spread / 2 + spread * t;
+      const radius = 96 + (i % 3) * 30;
+      const x = cx + Math.cos(angle) * radius;
+      const y = cy + Math.sin(angle) * radius;
+      const line = svg('line', { x1: cx, y1: cy, x2: x.toFixed(1), y2: y.toFixed(1), class: 'map-line' });
+      const dot = svg('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: 6, class: `map-dot ${cls(q)}` }, svg('title', {}, `${q.method} ${q.path}: ${q.error ? q.error : `HTTP ${q.status}`}, ${q.ms} ms`));
+      root.append(line, dot);
+      dots.push(line, dot);
+    });
+    const lx = cx + Math.cos(mid) * 190;
+    const ly = cy + Math.sin(mid) * 190;
+    const anchor = Math.cos(mid) > 0.25 ? 'start' : Math.cos(mid) < -0.25 ? 'end' : 'middle';
+    root.append(svg('text', { x: lx.toFixed(1), y: ly.toFixed(1), 'text-anchor': anchor, class: 'map-label' }, `${phase} (${items.length})`));
+  });
+  root.append(svg('circle', { cx, cy, r: 30, class: 'map-core' }), svg('text', { x: cx, y: cy + 4, 'text-anchor': 'middle', class: 'map-host' }, host.length > 14 ? `${host.slice(0, 13)}...` : host));
+  $('#map-svg').replaceChildren(root);
+  stagger(dots, 60);
+  $('#map-table').replaceChildren(
+    h('thead', {}, h('tr', {}, ...['Step', 'Request', 'Answer', 'Time'].map((t) => h('th', {}, t)))),
+    h('tbody', {}, ...reqs.map((q) => h('tr', {}, h('td', {}, q.phase), h('td', { class: 'mono' }, `${q.method} ${q.path}`), h('td', {}, q.error ? q.error : String(q.status)), h('td', {}, `${q.ms} ms`)))),
+  );
+  box.hidden = false;
+}
+
 function reportText(s) {
   const r = s.result;
   const lines = [`FlawRadar report for ${s.host}`, `Scanned ${formatDate(s.createdAt)}`, `Grade ${r.grade}, score ${r.score} out of 100`, ''];
@@ -186,6 +250,8 @@ function renderResult(s) {
     ]),
   );
   plainWords(r);
+  renderRisk(r);
+  renderMap(r, s.host);
   $('#result').hidden = false;
   $('#delete-area').hidden = !deleteTokenFor(id);
   $('#watch-link').setAttribute('href', `/watch?host=${encodeURIComponent(s.host)}`);

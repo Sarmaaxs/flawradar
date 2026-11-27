@@ -7,6 +7,8 @@ import { lookupDns } from './dnsinfo.js';
 import { runDeepProbes } from './deep.js';
 import { evaluate, PROBE_ORIGIN } from './checks.js';
 import { summarize } from './score.js';
+import { assessRisk } from './exposure.js';
+import { AsyncLocalStorage } from 'node:async_hooks';
 
 const DEFAULT_PORTS = { http: 80, https: 443 };
 
@@ -21,13 +23,32 @@ function originFor(target, scheme, ports) {
   return `${scheme}://${target.hostUrl}${port === defaultPort ? '' : `:${port}`}`;
 }
 
-// A failed request is data for the checks. A refused target is a real error.
-async function tryFetch(url, options) {
+// Every request a scan makes is noted (method, path, status, time) so the report can draw the request map.
+// AsyncLocalStorage keeps each scan's log apart when several run at once.
+const requestLog = new AsyncLocalStorage();
+
+function note(url, options, outcome, started) {
+  const store = requestLog.getStore();
+  if (!store || store.entries.length >= 120) return;
+  let path = '/';
   try {
-    return { res: await fetchUrl(url, options) };
+    const u = new URL(url);
+    path = `${u.pathname}${u.search}`.slice(0, 90);
+  } catch { /* keep the default */ }
+  store.entries.push({ phase: store.phase, method: options?.method || 'GET', path, status: outcome.status || 0, error: outcome.error || null, ms: Date.now() - started });
+}
+
+async function tryFetch(url, options) {
+  const started = Date.now();
+  try {
+    const res = await fetchUrl(url, options);
+    note(url, options, { status: res.status }, started);
+    return { res };
   } catch (err) {
     if (err instanceof AppError) throw err;
-    return { error: err.code || err.message || 'error' };
+    const error = err.code || err.message || 'error';
+    note(url, options, { error }, started);
+    return { error };
   }
 }
 
@@ -201,7 +222,15 @@ async function crawlExtraPages(homeRes, base, tryFetchFn, { onPage = () => {}, o
  * @param target  result of parseTarget()
  * @param options { deep, onStep(name, state), resolver, ports }
  */
-export async function runScan(target, options = {}) {
+export function runScan(target, options = {}) {
+  const store = { entries: [], phase: 'Start' };
+  return requestLog.run(store, async () => {
+    const result = await runScanInner(target, options, store);
+    return { ...result, requests: store.entries };
+  });
+}
+
+async function runScanInner(target, options, store) {
   const { deep = false, onStep = () => {}, onPage = () => {}, onRobots = () => {}, resolver, ports = portsFor(target) } = options;
   const started = Date.now();
 
@@ -219,6 +248,7 @@ export async function runScan(target, options = {}) {
   };
 
   const step = async (name, fn, { soft = false } = {}) => {
+    store.phase = name;
     onStep(name, 'running');
     try {
       const value = await fn();
@@ -356,6 +386,7 @@ export async function runScan(target, options = {}) {
     pagesChecked: 1 + (ctx.extraPages?.length || 0),
     findings,
     ...summary,
+    exposure: assessRisk(findings),
     tls: ctx.tls?.ok
       ? {
           protocol: ctx.tls.protocol,

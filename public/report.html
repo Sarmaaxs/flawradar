@@ -31,6 +31,21 @@
       <table id="counts" aria-label="Result counts"></table>
     </div>
     <div id="plain" class="summary-box" hidden></div>
+    <section id="risk" hidden>
+      <h2>How exposed is this site?</h2>
+      <p id="risk-line"></p>
+      <div class="riskbar" aria-hidden="true"><i></i></div>
+      <div id="risk-chains"></div>
+      <h3>Fix in this order</h3>
+      <ol id="risk-order" class="plain"></ol>
+      <p class="muted"><small>This is a model. Each weakness has an estimated chance of being used, and the figure combines them, including combinations that are worse together. It ranks and explains. It is not a measured probability for your site.</small></p>
+    </section>
+    <section id="map" hidden>
+      <h2>Request map</h2>
+      <p class="muted">Every request FlawRadar sent to your site, grouped by step. Green answered normally, blue redirected, grey was not found, red failed or was refused.</p>
+      <div id="map-svg" class="mapbox"></div>
+      <details><summary>All requests as a list</summary><div class="answer"><table id="map-table"></table></div></details>
+    </section>
     <p id="previous" class="muted" hidden></p>
     <div id="deep-note" class="notice" hidden>
       The deep checks were not run. They need proof that you control the host. <a id="deep-link" href="/verify">Add the proof</a>, then scan again with the deep box ticked.

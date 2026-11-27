@@ -629,3 +629,28 @@ a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visibl
 @media (prefers-reduced-motion:reduce) {
   .radar::before, .radar i, .language-marquee-track { animation:none!important; }
 }
+
+/* Risk bar and request map */
+.riskbar { height: 14px; margin: .4rem 0 1rem; background: #fff; border: 1px solid var(--ink); overflow: hidden; }
+.riskbar i { display: block; width: 100%; height: 100%; background: repeating-linear-gradient(90deg, var(--fail) 0 6px, #fff 6px 8px); transform: scaleX(var(--fill, 0)); transform-origin: left; }
+.mapbox { background: #fff; border: 1px solid var(--rule); }
+.reqmap { display: block; width: 100%; height: auto; }
+.map-line { stroke: #cfc9b4; stroke-width: 1; }
+.map-core { fill: var(--ink); }
+.map-host { fill: var(--paper); font: 700 9px var(--mono); }
+.map-label { fill: var(--muted); font: 11px var(--sans); }
+.map-dot { stroke: #fff; stroke-width: 1.5; }
+.map-dot.s2 { fill: var(--pass); }
+.map-dot.s3 { fill: var(--note); }
+.map-dot.s4 { fill: #8a8672; }
+.map-dot.s5, .map-dot.se { fill: var(--fail); }
+.map-dot:hover { stroke: var(--ink); }
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes pop { from { opacity: 0; transform: scale(.2); } }
+  @keyframes fadein { from { opacity: 0; } }
+  @keyframes riskdraw { from { transform: scaleX(0); } }
+  .map-line { animation: fadein .42s cubic-bezier(0,0,.2,1) calc(var(--i, 0) * 40ms) both; }
+  .map-dot { transform-box: fill-box; transform-origin: center; animation: pop .42s cubic-bezier(.2,0,0,1) calc(var(--i, 0) * 40ms + 120ms) both; }
+  .riskbar i { animation: riskdraw 1.2s cubic-bezier(.2,0,0,1) .3s both; }
+}
