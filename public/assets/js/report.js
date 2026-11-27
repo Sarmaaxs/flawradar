@@ -185,6 +185,24 @@ function exportReport() {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
+function renderChanges(s) {
+  const box = $('#changes');
+  const c = s.changes;
+  if (!c || !s.previous) { box.hidden = true; return; }
+  const names = (list) => list.map((x) => x.title).join('; ');
+  const sign = c.scoreDelta > 0 ? `+${c.scoreDelta}` : String(c.scoreDelta);
+  const parts = [h('p', {}, h('b', {}, `Since the last scan (${formatDate(s.previous.createdAt)}): `), `score ${s.previous.score} to ${s.result.score} (${sign}), grade ${c.gradeFrom} to ${c.gradeTo}.`)];
+  const row = (label, list) => list.length && parts.push(h('p', {}, h('b', {}, `${label} (${list.length}): `), names(list)));
+  row('Fixed', c.fixed);
+  row('New problems', c.newProblems);
+  row('Got worse', c.worse);
+  row('Improved', c.better);
+  row('Checked for the first time', c.newlyChecked);
+  if (parts.length === 1) parts.push(h('p', {}, 'Nothing changed.'));
+  box.replaceChildren(...parts);
+  box.hidden = false;
+}
+
 function renderResult(s) {
   const r = s.result;
   $('#title').textContent = `Report for ${s.host}`;
@@ -259,6 +277,7 @@ function renderResult(s) {
       h('a', { href: `/api/scans/${s.id}/fix?server=${server}` }, TAB_LABELS[server]),
     ]),
   );
+  renderChanges(s);
   plainWords(r);
   renderRisk(r);
   renderMap(r, s.host);

@@ -4,6 +4,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { config } from './config.js';
 import { AppError } from './errors.js';
+import { diffScans } from './scanner/diff.js';
 import * as db from './db.js';
 import { Limiter } from './ratelimit.js';
 import { parseTarget, resolvePublic } from './scanner/net.js';
@@ -197,8 +198,13 @@ function shapeScan(row) {
     previous: previous
       ? { id: previous.id, score: previous.score, grade: previous.grade, createdAt: previous.created_at }
       : null,
+    changes: previous ? diffScans(safeParse(previous.result), result) : null,
     retentionDays: config.retentionDays,
   };
+}
+
+function safeParse(text) {
+  try { return text ? JSON.parse(text) : null; } catch { return null; }
 }
 
 

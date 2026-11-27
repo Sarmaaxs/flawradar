@@ -1,0 +1,14 @@
+# One site per line. Only list sites you own or that invite testing.
+# These invite it: badssl.com exists to test TLS clients, scanme.nmap.org and testphp.vulnweb.com are
+# deliberately open to scanning. Add your own sites at the bottom.
+#
+# host                         what a correct report should show
+expired.badssl.com             # certificate expired: a TLS failure
+self-signed.badssl.com         # untrusted certificate
+wrong.host.badssl.com          # certificate for a different name
+untrusted-root.badssl.com      # untrusted root
+http.badssl.com                # no HTTPS: transport failures, grade F
+testphp.vulnweb.com            # old PHP and missing headers
+scanme.nmap.org                # plain old server, few protections
+example.com                    # tiny page: should not look scary
+flawradar.pro.et               # yours: should be one of your best grades

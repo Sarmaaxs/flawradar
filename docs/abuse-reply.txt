@@ -1,0 +1,13 @@
+Subject: Your request about FlawRadar
+
+Hello,
+
+Thank you for writing. FlawRadar is a tool that lets site owners check their own websites. It makes the same kind of requests a normal visitor's browser makes, and it only runs on a site when the person using it states that they own it or have permission.
+
+I have added <HOST> to our exclusion list, so FlawRadar will refuse to scan it from now on. This takes effect immediately.
+
+If you tell me the approximate time of the requests you saw, I will look at what was requested and reply with the details.
+
+Regards,
+<NAME>
+FlawRadar

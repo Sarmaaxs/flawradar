@@ -122,7 +122,7 @@ const q = {
   fail: db.prepare("UPDATE scans SET status = 'failed', error = ?, finished_at = ? WHERE id = ?"),
   get: db.prepare('SELECT * FROM scans WHERE id = ?'),
   previous: db.prepare(
-    "SELECT id, score, grade, created_at FROM scans WHERE host = ? AND id != ? AND status = 'done' AND created_at < ? ORDER BY created_at DESC LIMIT 1",
+    "SELECT id, score, grade, result, created_at FROM scans WHERE host = ? AND id != ? AND status = 'done' AND created_at < ? ORDER BY created_at DESC LIMIT 1",
   ),
   countHost: db.prepare('SELECT COUNT(*) AS n FROM scans WHERE host = ? AND created_at >= ?'),
   purge: db.prepare('DELETE FROM scans WHERE created_at < ?'),
