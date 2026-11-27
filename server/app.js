@@ -60,9 +60,9 @@ function securityHeaders() {
   const h = {
     'Content-Security-Policy': [
       "default-src 'none'",
-      "script-src 'self' https://translate.google.com https://translate.googleapis.com",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data:",
+      "script-src 'self' https://translate.google.com https://translate.googleapis.com https://www.gstatic.com",
+      "style-src 'self' 'unsafe-inline' https://translate.googleapis.com https://www.gstatic.com",
+      "img-src 'self' data: https://translate.google.com https://translate.googleapis.com https://www.gstatic.com",
       "connect-src 'self' https://translate.googleapis.com",
       "frame-src https://translate.google.com",
       "base-uri 'none'",
